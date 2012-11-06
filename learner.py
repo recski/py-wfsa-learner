@@ -10,14 +10,11 @@
 import sys
 import copy
 
+import logging
+
 import math
 import random
 from collections import defaultdict
-
-from optparse import OptionParser
-
-def logg(s) :
-    sys.stderr.write(s+"\n")
 
 # Directed graph with edge labels.
 # g[a][b] = l
@@ -322,7 +319,7 @@ def initialAutomaton(alphabet, initial_transitions) :
     if initial_transitions:
 	for s in initial_transitions.keys():
 	    if s not in states:
-		logg("invalid state name in init: %s" % s)
+		logging.warning("invalid state name in init: %s" % s)
 		assert False
 
     # calculate uniform transition distributions
@@ -338,11 +335,11 @@ def initialAutomaton(alphabet, initial_transitions) :
 	if initial_transitions and s1 in initial_transitions:
 	    for s2 in initial_transitions[s1]:
 		if s2 not in states:
-		    logg("invalid state name in init: %s" % s2)
+		    logging.warning("invalid state name in init: %s" % s2)
 		    # FIXME
 		    assert False
 		if not is_valid_transition(s1, s2):
-		    logg("%s %s in init is not a valid transition" % (s1, s2))
+		    logging.warning("%s %s in init is not a valid transition" % (s1, s2))
 		    # FIXME
 		    assert False
 		prob = initial_transitions[s1][s2]
@@ -442,8 +439,8 @@ def dumpAutomaton(automaton) :
     for n1,em in automaton.emissions.iteritems() :
         print ">",n1,em
 
-def main(options) :
-
+def learn(options) :
+    """The learning algorithm -- move to somewhere else."""
     # init
     startTemperature = 1e-5
     endTemperature   = 1e-7
@@ -461,7 +458,7 @@ def main(options) :
     if options.initial_transitions:
 	initial_transitions = readTransitions(options.initial_transitions)
         
-    logg( "Analytical optimum of the chosen error func: %f" % distance(corpus,automatonFromCorpus(corpus),distfp) )
+    logging.info( "Analytical optimum of the chosen error func: %f" % distance(corpus,automatonFromCorpus(corpus),distfp) )
     if options.emitfile:
         numbers_per_letters = readDict(open(options.emitfile))
         if numbers_per_letters.keys() != alphabet.keys():
@@ -469,10 +466,10 @@ def main(options) :
         automaton = initialAutomaton(numbers_per_letters, initial_transitions=initial_transitions)
     elif getattr(options, "init_from_corpus", False):
         automaton = automatonFromCorpus(corpus)
-	logg( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
+	logging.info( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
 	#dumpAutomaton(automaton)
 	smoothAutomaton(automaton)
-	logg( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
+	logging.info( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
 	#dumpAutomaton(automaton)
     else:
         alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
@@ -483,10 +480,10 @@ def main(options) :
 
     #dumpAutomaton(automaton)
 
-    logg( "unmemoized KL:\t%f" % kullbackUnMemoized(corpus,automaton) )
-    logg( "memoized KL:\t%f" % distance(corpus,automaton, kullback) )
-    logg( "sqerr:\t%f" % distance(corpus,automaton, squarerr) )
-    logg( "l1err:\t%f" % distance(corpus,automaton, l1err) )
+    logging.info( "unmemoized KL:\t%f" % kullbackUnMemoized(corpus,automaton) )
+    logging.info( "memoized KL:\t%f" % distance(corpus,automaton, kullback) )
+    logging.info( "sqerr:\t%f" % distance(corpus,automaton, squarerr) )
+    logging.info( "l1err:\t%f" % distance(corpus,automaton, l1err) )
 
     # FIXME: avoid deepcopy
     automaton2 = copy.deepcopy(automaton) # TODO specialize deepcopy
@@ -539,7 +536,7 @@ def main(options) :
             # print "-----"
 	    #print temperature,"\t",energy
 	    #sys.stdout.flush()
-	    logg("%s\t%s" % (temperature,energy))
+	    logging.info("%s\t%s" % (temperature,energy))
             # dumpAutomaton(automaton)
             turnCount = 0
             temperature *= temperatureQuotient
@@ -548,46 +545,3 @@ def main(options) :
 
     dumpAutomaton(automaton)
 
-# TODO: if __name__ == '__main__'
-# opt parser func
-parser = OptionParser()
-parser.add_option("-f", "--factor", dest="factor", help="change factor", 
-                  metavar="FACTOR", default=0.97, type="float")
-parser.add_option("-t", "--tempq",dest="tempq", default=0.9, type="float",
-                  help="temperature quotient", metavar="TEMPQ")
-parser.add_option("-n", "--num_of_states",dest="numstate", type="int", default=1,
-                  help="number of states per letter of alphabet", metavar="N")
-parser.add_option("-i", "--iter",dest="iter", type="int",
-                  help="number of iterations per temperature", metavar="I")
-parser.add_option("-d", "--distance",dest="distfp", help="distance method",
-                  metavar="I", type="choice",
-                  choices=["kullback", "l1err", "squarerr"])
-parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
-                  help="filename of file having (letter,number) pairs",
-                  metavar="FILENAME")
-parser.add_option("-s", "--separator",dest="separator", type="str",
-                  help="separator of letters in string (allows using complex letters, ie. labels)",
-		  metavar="SEPARATOR", default="")
-parser.add_option("-c", "--from-corpus", dest="init_from_corpus", action="store_true",
-                  help="initialize the automaton from corpus frequencies with smoothing")
-parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
-                  metavar="PROBABILITY", default=None, type="float",
-                  help="in random parameter selection prefer the one which improved the result in the previous iteration with PROBABILITY")
-parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons", type="int",
-                  metavar="N", default=0,
-		  help="number of (non-initial and non-final) states, that doesn't emit anything") 
-parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
-                  metavar="FILE", type="str",
-                  help="File with initial transition probabilities. Each transition should be in a separate line, \
-source state, target state and  probability are separated by space. Transitions that are not given share the remaining \
-probability mass equally.")
-
-
-(options, args) = parser.parse_args()
-
-main(options)
-
-# Ha van egy WFSA-m, akkor ki kell ertekeljem, hogy mennyire
-# passzol egy nyelvhez, es mennyire pici. Az utobbi a
-# nemnulla atmenetek szamanak valamilyen fuggvenye.
-# Az elobbi talan valami KL-divergencia.

@@ -1,13 +1,9 @@
 # TODO use log prob 
 # 
 
-import sys
-import copy
-
 import math
 from collections import defaultdict
 
-from logger import log
 from corpus import Corpus
 from learner import SimulatedAnnealing
 
@@ -330,95 +326,3 @@ class Automaton:
         for n1,em in automaton.emissions.iteritems() :
             print ">",n1,em
 
-
-
-def main(options) :
-    startTemperature = 1e-5
-    endTemperature   = 1e-7
-    temperatureQuotient = options.tempq
-    turnsForEach = options.iter
-
-    corpus = Corpus.read(sys.stdin, options.separator)
-    corpus.normalizeCorpus()
-
-    alphabet = corpus.get_alphabet()
-
-    distfp = options.distfp
-
-    initial_transitions = None
-    if options.initial_transitions:
-	initial_transitions = read_transitions(options.initial_transitions)
-        
-    bigram_automaton = Automaton.create_from_corpus(corpus)
-    log( "Analytical optimum of the chosen error func: %f" % bigram_automaton.distance(corpus, distfp) )
-    if options.emitfile:
-        # FIXME: close opened file
-        numbers_per_letters = read_emission_states(open(options.emitfile))
-        if numbers_per_letters.keys() != alphabet.keys():
-            raise Exception("File in wrong format describing emitter states")
-        automaton = Automaton.create_uniform_automaton(numbers_per_letters, initial_transitions=initial_transitions)
-    elif getattr(options, "init_from_corpus", False):
-        automaton = Automaton.create_from_corpus(corpus)
-	log( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
-	#dumpAutomaton(automaton)
-	automaton.smooth()
-	log( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
-	#dumpAutomaton(automaton)
-    else:
-        alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
-	if options.num_epsilons > 0:
-	    # adding states for epsilon emission
-	    alphabet_numstate["EPSILON"] = options.num_epsilons
-        automaton = Automaton.create_uniform_automaton(alphabet_numstate, initial_transitions=initial_transitions)
-
-    log( "memoized KL:\t%f" % automaton.distance(corpus,automaton, kullback) )
-    log( "sqerr:\t%f" % distance(corpus,automaton, squarerr) )
-    log( "l1err:\t%f" % distance(corpus,automaton, l1err) )
-
-
-    learner = SimulatedAnnealing(corpus, automaton, distfp)
-    optimized_automaton = learner.run()
-
-
-def optparser():
-    parser = OptionParser()
-    parser.add_option("-f", "--factor", dest="factor", help="change factor", 
-                      metavar="FACTOR", default=0.97, type="float")
-    parser.add_option("-t", "--tempq",dest="tempq", default=0.9, type="float",
-                      help="temperature quotient", metavar="TEMPQ")
-    parser.add_option("-n", "--num_of_states",dest="numstate", type="int", default=1,
-                      help="number of states per letter of alphabet", metavar="N")
-    parser.add_option("-i", "--iter",dest="iter", type="int",
-                      help="number of iterations per temperature", metavar="I")
-    parser.add_option("-d", "--distance",dest="distfp", help="distance method",
-                      metavar="I", type="choice",
-                      choices=["kullback", "l1err", "squarerr"])
-    parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
-                      help="filename of file having (letter,number) pairs",
-                      metavar="FILENAME")
-    parser.add_option("-s", "--separator",dest="separator", type="str",
-                      help="separator of letters in string (allows using complex letters, ie. labels)",
-                      metavar="SEPARATOR", default="")
-    parser.add_option("-c", "--from-corpus", dest="init_from_corpus", action="store_true",
-                      help="initialize the automaton from corpus frequencies with smoothing")
-    parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
-                      metavar="PROBABILITY", default=None, type="float",
-                      help="in random parameter selection prefer the one which improved the result in the previous iteration with PROBABILITY")
-    parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons", type="int",
-                      metavar="N", default=0,
-                      help="number of (non-initial and non-final) states, that doesn't emit anything") 
-    parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
-                      metavar="FILE", type="str",
-                      help="File with initial transition probabilities. Each transition should be in a separate line, \
-    source state, target state and  probability are separated by space. Transitions that are not given share the remaining \
-    probability mass equally.")
-
-
-    (options, args) = parser.parse_args()
-
-    return options
-
-
-if __name__ == "__main__":
-    options = optparser()
-    main(options)
