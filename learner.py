@@ -16,6 +16,8 @@ import math
 import random
 from collections import defaultdict
 
+from corpus import read_corpus, read_dict
+
 # Directed graph with edge labels.
 # g[a][b] = l
 
@@ -399,7 +401,7 @@ def learn(options) :
     temperatureQuotient = options.tempq
     turnsForEach = options.iter
 
-    corpus = readCorpus(sys.stdin, options.separator)
+    corpus = read_corpus(sys.stdin, options.separator)
     corpus = normalizeCorpus(corpus)
 
     alphabet = getAlphabet(corpus)
@@ -412,7 +414,7 @@ def learn(options) :
         
     logging.info( "Analytical optimum of the chosen error func: %f" % distance(corpus,automatonFromCorpus(corpus),distfp) )
     if options.emitfile:
-        numbers_per_letters = readDict(open(options.emitfile))
+        numbers_per_letters = read_dict(open(options.emitfile))
         if numbers_per_letters.keys() != alphabet.keys():
             raise Exception("File in wrong format describing emitter states")
         automaton = initialAutomaton(numbers_per_letters, initial_transitions=initial_transitions)

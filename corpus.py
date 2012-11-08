@@ -8,11 +8,11 @@ class CorpusError(Exception):
     """For corpus-related errors."""
     pass
 
-# TODO: put to a class
+# TODO: put to a class?
 # Number of fields allowed in readCorpus
 __FIELD_RANGE = (1, 2)
 
-def readCorpus(stream, separator=None, silent=False):
+def read_corpus(stream, separator=None, silent=False):
     """
     Reads the corpus from @p stream and returns it. The corpus is a
     {word: frequency} (???) map.
@@ -45,7 +45,7 @@ def readCorpus(stream, separator=None, silent=False):
                 corpus[key] += int(a[1])
     return corpus
 
-def readDict(stream, silent=False):
+def read_dict(stream, silent=False):
     """
     Reads a dictionary from a stream.
     @param silent if @c True, invalid lines are silently dropped; otherwise,
@@ -66,19 +66,6 @@ def readDict(stream, silent=False):
                 continue
         d[le[0]] = int(le[1])
     return d
-
-def readTransitions(filename):
-    tr = {}
-    f = open(filename)
-    for l in f:
-	(state1, state2, probstr) = l.strip().split()
-	if state1 not in tr:
-	    tr[state1] = {}
-	prob = float(probstr)
-	assert prob >= 0.0 and prob <= 1.0
-	tr[state1][state2] = float(prob)
-    f.close()
-    return tr
 
 def getAlphabet(corpus) :
     alphabet = defaultdict(int)
