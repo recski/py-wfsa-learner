@@ -4,8 +4,7 @@
 import math
 from collections import defaultdict
 
-from corpus import Corpus
-from learner import SimulatedAnnealing
+from misc import closure_and_top_sort
 
 class Automaton:
 
@@ -41,7 +40,10 @@ class Automaton:
             if state1 not in tr:
                 tr[state1] = {}
             prob = float(probstr)
-            assert prob >= 0.0 and prob <= 1.0
+            if not (prob >= 0.0 and prob <= 1.0):
+                raise ValueError("invalid probabilities in {0}".format(
+                    filename))
+
             tr[state1][state2] = float(prob)
         f.close()
         return tr
@@ -52,8 +54,21 @@ class Automaton:
         return self.m_emittors[letter]
 
     @staticmethod
+    def is_epsilon_state(state):
+        return state.startswith("EPSILON_")
+
+    @staticmethod
+    def is_valid_transition(state1, state2):
+        # subsequent non emitting states are not allowed
+        # the only exception is '^' -> '$'
+        if (state1, state2) == ('^', '$'):
+            return True
+        return not (Automaton.nonemitting(state1) and Automaton.nonemitting(state2)) and \
+           not state2 == '^' and not state1 == "$" 
+
+    @staticmethod
     def nonemitting(state) :
-        return state=="^" or state=="$" or is_epsilon_state(state)
+        return state=="^" or state=="$" or Automaton.is_epsilon_state(state)
 
     def _update_emittors(self):
         self.m_emittors = {} # Azert nem defaultdict(set), mert igy biztonsagosabb.
@@ -93,19 +108,6 @@ class Automaton:
         automaton._update_emittors()
         return automaton
 
-    @staticmethod
-    def is_epsilon_state(state):
-        return state.startswith("EPSILON_")
-
-    @staticmethod
-    def is_valid_transition(state1, state2):
-        # subsequent non emitting states are not allowed
-        # the only exception is '^' -> '$'
-        if (state1, state2) == ('^', '$'):
-            return True
-        return not (nonemitting(state1) and nonemitting(state2)) and \
-           not state2 == '^' and not state1 == "$" 
-
     def probability_of_state(self, string, state):
         """The probability of the event that the automaton emits
         'string' and finishes the quest at 'state'.
@@ -131,19 +133,8 @@ class Automaton:
 
     def probability_of_string(self, string) :
         """Probability that the automaton emits this string with the accepting state"""
-        return self.probability_of_state(automaton, string, "$")
+        return self.probability_of_state(string, "$")
 
-    @staticmethod
-    def closure_and_top_sort(strings) :
-        # Closure: includes all prefixes of the strings.
-        # Output topologically sorted according to the
-        # partial ordering of "being a prefix". AKA sorted.
-        closed = set()
-        for string in strings :
-            for i in range(len(string)+1) :
-                closed.add(string[:i])
-        return sorted(list(closed))
- 
     def probability_of_strings(self, strings) :
         """Expects a list of strings.
          Outputs a map from those strings to probabilities.
@@ -167,8 +158,8 @@ class Automaton:
 
             # first compute the epsilon states probs because of the
             # memoization dependency
-            for state in [ s for s in states if is_epsilon_state(s) ] + \
-                         [ s for s in states if not is_epsilon_state(s) ]:
+            for state in [ s for s in states if Automaton.is_epsilon_state(s) ] + \
+                         [ s for s in states if not Automaton.is_epsilon_state(s) ]:
                 if len(string)==0 :
                     memo[string][state] = self.m["^"][state]
                 else :
@@ -183,7 +174,7 @@ class Automaton:
 
                     # check the case of epsilon emission
                     for epsilonState in self.emittors("EPSILON"):
-                        if not is_valid_transition(epsilonState, state):
+                        if not Automaton.is_valid_transition(epsilonState, state):
                             continue
                         # we already have this value because epsilon states
                         # came first
@@ -236,11 +227,12 @@ class Automaton:
             for index in xrange(alphabet[letter]):
                 state = letter + "_" + str(index)
                 automaton.emissions[state] = letter
-                if is_degenerate and not is_epsilon_state(state):
+                if is_degenerate and not Automaton.is_epsilon_state(state):
                     # found at least one emitting state
                     is_degenerate = False
 
-        assert not is_degenerate
+        if is_degenerate:
+            raise Exception("Automaton has no emittors")
                     
         states = automaton.emissions.keys()
         states.append('^')
@@ -249,54 +241,50 @@ class Automaton:
         if initial_transitions:
             for s in initial_transitions.keys():
                 if s not in states:
-                    log("invalid state name in init: %s" % s)
-                    assert False
+                    raise Exception("invalid state name in init: %s" % s)
 
         # calculate uniform transition distributions
         for s1 in states:
             if s1 == '$':
                 continue
             num_valid_transitions = \
-                len([ s2 for s2 in states if is_valid_transition(s1, s2) ])
-            assert num_valid_transitions > 0
+                len([ s2 for s2 in states if Automaton.is_valid_transition(s1, s2) ])
+            if num_valid_transitions == 0:
+                raise Exception("There are no valid transitions in automaton")
 
             init_total = 0.0
             n_states_initialized = 0
             if initial_transitions and s1 in initial_transitions:
                 for s2 in initial_transitions[s1]:
                     if s2 not in states:
-                        log("invalid state name in init: %s" % s2)
-                        # FIXME
-                        assert False
-                    if not is_valid_transition(s1, s2):
-                        log("%s %s in init is not a valid transition" % (s1, s2))
-                        # FIXME
-                        assert False
+                        raise Exception("invalid state name in init: %s" % s2)
+                    if not Automaton.is_valid_transition(s1, s2):
+                        raise Exception("%s %s in init is not a valid transition" % (s1, s2))
                     prob = initial_transitions[s1][s2]
                     automaton.m[s1][s2] = prob
                     init_total += prob
                     n_states_initialized += 1
-                    assert init_total <= 1.0
+                    if init_total > 1.0:
+                        raise Exception("Two much probability for init_total")
+
             # divide up remaining mass into equal parts
             u = (1.0 - init_total) / (num_valid_transitions - n_states_initialized)
             for s2 in states:
-                if is_valid_transition(s1, s2) and (s1 not in automaton.m or s2 not in automaton.m[s1]): 
+                if Automaton.is_valid_transition(s1, s2) and (s1 not in automaton.m or s2 not in automaton.m[s1]): 
                     automaton.m[s1][s2] = u
                 
         automaton._update_emittors()
         return automaton
                 
-
-    @staticmethod
-    def normalize_node(edges) :
+    def normalize_node(self, edges):
         total = sum(edges.values())
         for n2 in edges.keys() :
             edges[n2] /= total
 
     def smooth(self):
         """Smooth zero transition probabilities"""
-        nodes = automaton.m.keys()
-        for node, edges in automaton.m.iteritems():
+        nodes = self.m.keys()
+        for node, edges in self.m.iteritems():
             total = sum(edges.values())
             added = 0
             eps = 1E-4
@@ -305,24 +293,30 @@ class Automaton:
                 if old_val < eps:
                     edges[other_node] = eps
                     added += eps - old_val
-            assert added < 1
+                if added >= 1.0:
+                    raise Exception("Too much probability " +
+                                    "added while smoothing")
+
+            # normalize the nodes that haven't been smoothed
             for n in edges:
                 if edges[n] > eps:
                     edges[n] /= total / (1 - added)
-            assert abs(sum(edges.values()) - 1.0) < eps
+
+            if abs(sum(edges.values()) - 1.0) > eps:
+                raise Exception("Edges sum up to too much")
             
 	        
     def boost_edge(self, n1, n2, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""
-        automaton.m[n1][n2] *= factor
-        normalize_node(automaton.m[n1])
+        self.m[n1][n2] *= factor
+        self.normalize_node(self.m[n1])
 
     def dump(self) :
-        nodes = sorted(automaton.m.keys())
+        nodes = sorted(self.m.keys())
         for n1 in nodes :
             for n2 in nodes + ['$'] :
-                if n2 in automaton.m[n1] :
-                    print n1,n2,automaton.m[n1][n2]
-        for n1,em in automaton.emissions.iteritems() :
+                if n2 in self.m[n1] :
+                    print n1,n2,self.m[n1][n2]
+        for n1,em in self.emissions.iteritems() :
             print ">",n1,em
 
