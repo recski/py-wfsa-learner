@@ -9,8 +9,12 @@ from misc import closure_and_top_sort
 class Automaton:
 
     def __init__(self) :
+        # the transitions
         self.m = defaultdict(lambda: defaultdict(float))
+
+        # emissions for the states
         self.emissions = {}
+        self.m_emittors = defaultdict(set)
         # A kibocsatas determinisztikus.
         #
         # By convention, for backward compatibility:
@@ -22,14 +26,6 @@ class Automaton:
         # Az allapotokrol es a kibocsatasokrol is
         # csak annyit tetelezunk fel, hogy hash-elhetok,
         # de a gyakorlatban mindketto string.
-
-    @staticmethod
-    def read_emission_states(stream):
-        d = {}
-        for l in stream:
-            le = l.strip().split()
-            d[le[0]] = int(le[1])
-        return d
 
     @staticmethod
     def read_transitions(filename):
@@ -48,45 +44,84 @@ class Automaton:
         f.close()
         return tr
 
-    # This only functions correctly if _update_emittors()
-    # was called after creating or updating self.emissions
-    def emittors(self, letter):
-        return self.m_emittors[letter]
+    @staticmethod
+    def _create_automaton_from_alphabet(alphabet):
+        """ Creates states of the automaton given by @alphabet
+        @alphabet is a dict from letters to the number of states that emits
+        that letter
+        """
+        automaton = Automaton()
+
+        # create states and emissions
+        is_degenerate = True
+        for letter in alphabet:
+            for index in xrange(alphabet[letter]):
+                state = letter + "_" + str(index)
+                automaton.emissions[state] = letter
+                automaton.m_emittors[letter].add(state)
+                if is_degenerate and not Automaton.is_epsilon_state(state):
+                    # found at least one emitting state
+                    is_degenerate = False
+
+        if is_degenerate:
+            raise Exception("Automaton has no emittors")
+        
+        return automaton
 
     @staticmethod
-    def is_epsilon_state(state):
-        return state.startswith("EPSILON_")
+    def create_uniform_automaton(alphabet, initial_transitions=None) :
+        """Creates an automaton with alphabet and uniform transition probabilities.
+        If initial_transitions is given (dict of (state, dict of (state, probability),
+        returned by read_transitions) the remaining probability mass will be 
+        divided up among the uninitialized transitions in an uniform manner.
 
-    @staticmethod
-    def is_valid_transition(state1, state2):
-        # subsequent non emitting states are not allowed
-        # the only exception is '^' -> '$'
-        if (state1, state2) == ('^', '$'):
-            return True
-        return not (Automaton.nonemitting(state1) and Automaton.nonemitting(state2)) and \
-           not state2 == '^' and not state1 == "$" 
+        """
 
-    @staticmethod
-    def nonemitting(state) :
-        return state=="^" or state=="$" or Automaton.is_epsilon_state(state)
+        automaton = Automaton._create_automaton_from_alphabet(alphabet)
+                    
+        states = automaton.emissions.keys()
+        states.append('^')
+        states.append('$')
 
-    def _update_emittors(self):
-        self.m_emittors = {} # Azert nem defaultdict(set), mert igy biztonsagosabb.
-	self.m_emittors["EPSILON"] = set() # avoid key error if there are no epsilon states
-        for state, letter in self.emissions.iteritems() :
-            if letter not in self.m_emittors :
-                self.m_emittors[letter] = set()
-            self.m_emittors[letter].add(state)
+        if initial_transitions:
+            for s in initial_transitions.keys():
+                if s not in states:
+                    raise Exception("invalid state name in init: %s" % s)
 
-    def copy(self) :
-        a2 = Automaton()
-        a2.m = self.m.copy()
-        a2.emissions = self.emissions.copy()
-        a2.m_emittors = self.m_emittors.copy()
-        return a2
+        # calculate uniform transition distributions
+        for s1 in states:
+            if s1 == '$':
+                continue
 
+            valid_next_states = [s2 for s2 in states
+                                 if Automaton.is_valid_transition(s1, s2) ]
+
+            init_total = 0.0
+            states_initialized = set()
+            if initial_transitions and s1 in initial_transitions:
+                for s2 in initial_transitions[s1]:
+                    if s2 not in states:
+                        raise Exception("invalid state name in init: %s" % s2)
+
+                    prob = initial_transitions[s1][s2]
+                    automaton.m[s1][s2] = prob
+                    init_total += prob
+                    states_initialized.add(s2)
+                    if init_total > 1.0:
+                        raise Exception("Two much probability for init_total")
+
+            # divide up remaining mass into equal parts
+            u = (1.0 - init_total) / (len(valid_next_states) - len(states_initialized))
+            for s2 in valid_next_states - states_initialized:
+                automaton.m[s1][s2] = u
+                
+        return automaton
+                
     @staticmethod
     def create_from_corpus(corpus) :
+        """ Creates an automaton from a corpus, where @corpus is a dict from
+        items (str or tuple) to counts
+        """
         automaton = Automaton()
         alphabet = set()
         for item, cnt in corpus.iteritems() :
@@ -100,89 +135,95 @@ class Automaton:
                 alphabet.add(item[i+1])
                 automaton.m[item[i]][item[i+1]] += cnt
         for n1, value in automaton.m.iteritems() :
-            total = sum(value.values())
-            for n2, v in value.iteritems() :
-                automaton.m[n1][n2] /= total
+            automaton.normalize_node(n1)
         for l in alphabet :
             automaton.emissions[l] = l
-        automaton._update_emittors()
+            automaton.m_emittors[l].add(l)
         return automaton
 
-    def probability_of_state(self, string, state):
+    @staticmethod
+    def is_epsilon_state(state):
+        return state.startswith("EPSILON_")
+
+    def is_valid_transition(state1, state2):
+        # subsequent non emitting states are not allowed
+        # the only exception is '^' -> '$'
+        if (state1, state2) == ('^', '$'):
+            return True
+        return not (Automaton.nonemitting(state1) and Automaton.nonemitting(state2)) and \
+           not state2 == '^' and not state1 == "$" 
+
+    @staticmethod
+    def nonemitting(state) :
+        return state=="^" or state=="$" or Automaton.is_epsilon_state(state)
+
+    def emittors(self, letter):
+        return self.m_emittors[letter]
+
+    def copy(self) :
+        # TODO
+        a2 = Automaton()
+        a2.m = self.m.copy()
+        a2.emissions = self.emissions.copy()
+        a2.m_emittors = self.m_emittors.copy()
+        return a2
+
+    def update_probability_of_string_in_state(self, string, state, memo):
         """The probability of the event that the automaton emits
         'string' and finishes the quest at 'state'.
         'state' did not emit yet:
         It will emit the next symbol following 'string'.
-
-        It expects that the _update_emittors() method is called
-        sometime before, otherwise the output of self.emittors()
-        is not up to date.
-
         """
 
         if len(string)==0 :
             return self.m["^"][state]
+
         head = string[:-1]
         tail = string[-1]
         total = 0.0
+        # compute real emissions
         for previousState in self.emittors(tail) :
-            soFar = self.probability_of_state(self, head, previousState)
+            soFar = memo[head][previousState]
             soFar *= self.m[previousState][state]
             total += soFar
-        return total
 
-    def probability_of_string(self, string) :
-        """Probability that the automaton emits this string with the accepting state"""
-        return self.probability_of_state(string, "$")
+        # check the case of epsilon emission
+        for epsilonState in self.emittors("EPSILON"):
+            # we already have this value because epsilon states
+            # came first
+            soFar = memo[string][epsilonState]
+            soFar *= self.m[epsilonState][state]
+            total += soFar
+        memo[string][state] = total
 
-    def probability_of_strings(self, strings) :
-        """Expects a list of strings.
-         Outputs a map from those strings to probabilities.
-         This can then be aggregated somewhere else.
-         The trick is that it uses memoization
-         to reuse results for shorter strings. 
-
-         FIXME: probabilityOfState common code
-         """ 
-
-        topsorted = closure_and_top_sort(strings)
+    def update_probability_of_string(self, string, memo) :
+        """Probability that the automaton emits this string"""
         states = set(self.m.keys())
         states.add("$")
         states.remove("^")
+
+        # first compute the epsilon states probs because of the
+        # memoization dependency
+        for state in sorted(states,
+                     key=lambda x: not Automaton.is_epsilon_state(x)):
+            self.probability_of_string_in_state(string, state, memo)
+
+    def probability_of_strings(self, strings) :
+        """
+        Expects a list of strings.
+        Outputs a map from those strings to probabilities.
+        This can then be aggregated somewhere else.
+        The trick is that it uses memoization
+        to reuse results for shorter strings. 
+        """ 
+        topsorted = closure_and_top_sort(strings)
 
         # memo[string][state] = probabilityOfState(self,string,state)
         memo = defaultdict(lambda: defaultdict(float))
         output = {}
 
         for string in topsorted :
-
-            # first compute the epsilon states probs because of the
-            # memoization dependency
-            for state in [ s for s in states if Automaton.is_epsilon_state(s) ] + \
-                         [ s for s in states if not Automaton.is_epsilon_state(s) ]:
-                if len(string)==0 :
-                    memo[string][state] = self.m["^"][state]
-                else :
-                    total = 0.0
-
-                    head = string[:-1]
-                    tail = string[-1]
-                    for previousState in self.emittors(tail) :
-                        soFar = memo[head][previousState]
-                        soFar *= self.m[previousState][state]
-                        total += soFar
-
-                    # check the case of epsilon emission
-                    for epsilonState in self.emittors("EPSILON"):
-                        if not Automaton.is_valid_transition(epsilonState, state):
-                            continue
-                        # we already have this value because epsilon states
-                        # came first
-                        soFar = memo[string][epsilonState]
-                        soFar *= self.m[epsilonState][state]
-                        total += soFar
-
-                    memo[string][state] = total
+            self.update_probability_of_string(string, memo)
 
             output[string] = memo[string]["$"]
         return output
@@ -211,71 +252,6 @@ class Automaton:
                 distance += distfp(prob, modeledProb)
         return distance
 
-    @staticmethod
-    def create_uniform_automaton(alphabet, initial_transitions=None) :
-        """Creates an automaton with alphabet and uniform transition probabilities.
-        If initial_transitions is given (dict of (state, dict of (state, probability),
-        returned by read_transitions) the remaining probability mass will be 
-        divided up among the uninitialized transitions in an uniform manner.
-
-        """
-        automaton = Automaton()
-
-        # create states and emissions
-        is_degenerate = True
-        for letter in alphabet:
-            for index in xrange(alphabet[letter]):
-                state = letter + "_" + str(index)
-                automaton.emissions[state] = letter
-                if is_degenerate and not Automaton.is_epsilon_state(state):
-                    # found at least one emitting state
-                    is_degenerate = False
-
-        if is_degenerate:
-            raise Exception("Automaton has no emittors")
-                    
-        states = automaton.emissions.keys()
-        states.append('^')
-        states.append('$')
-
-        if initial_transitions:
-            for s in initial_transitions.keys():
-                if s not in states:
-                    raise Exception("invalid state name in init: %s" % s)
-
-        # calculate uniform transition distributions
-        for s1 in states:
-            if s1 == '$':
-                continue
-            num_valid_transitions = \
-                len([ s2 for s2 in states if Automaton.is_valid_transition(s1, s2) ])
-            if num_valid_transitions == 0:
-                raise Exception("There are no valid transitions in automaton")
-
-            init_total = 0.0
-            n_states_initialized = 0
-            if initial_transitions and s1 in initial_transitions:
-                for s2 in initial_transitions[s1]:
-                    if s2 not in states:
-                        raise Exception("invalid state name in init: %s" % s2)
-                    if not Automaton.is_valid_transition(s1, s2):
-                        raise Exception("%s %s in init is not a valid transition" % (s1, s2))
-                    prob = initial_transitions[s1][s2]
-                    automaton.m[s1][s2] = prob
-                    init_total += prob
-                    n_states_initialized += 1
-                    if init_total > 1.0:
-                        raise Exception("Two much probability for init_total")
-
-            # divide up remaining mass into equal parts
-            u = (1.0 - init_total) / (num_valid_transitions - n_states_initialized)
-            for s2 in states:
-                if Automaton.is_valid_transition(s1, s2) and (s1 not in automaton.m or s2 not in automaton.m[s1]): 
-                    automaton.m[s1][s2] = u
-                
-        automaton._update_emittors()
-        return automaton
-                
     def normalize_node(self, edges):
         total = sum(edges.values())
         for n2 in edges.keys() :
@@ -283,15 +259,14 @@ class Automaton:
 
     def smooth(self):
         """Smooth zero transition probabilities"""
-        nodes = self.m.keys()
-        for node, edges in self.m.iteritems():
+        for state, edges in self.m.iteritems():
             total = sum(edges.values())
             added = 0
             eps = 1E-4
-            for other_node in nodes:
-                old_val = edges.get(other_node, 0.0)
+            for other_state in edges:
+                old_val = edges.get(other_state, 0.0)
                 if old_val < eps:
-                    edges[other_node] = eps
+                    edges[other_state] = eps
                     added += eps - old_val
                 if added >= 1.0:
                     raise Exception("Too much probability " +
@@ -313,10 +288,10 @@ class Automaton:
 
     def dump(self) :
         nodes = sorted(self.m.keys())
-        for n1 in nodes :
-            for n2 in nodes + ['$'] :
-                if n2 in self.m[n1] :
-                    print n1,n2,self.m[n1][n2]
-        for n1,em in self.emissions.iteritems() :
+        for n1 in nodes:
+            for n2 in nodes + ['$']:
+                if n2 in self.m[n1]:
+                    print n1, n2, self.m[n1][n2]
+        for n1, em in self.emissions.iteritems():
             print ">",n1,em
 
