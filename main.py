@@ -1,11 +1,45 @@
 """The entry point of the program."""
 
+import sys
 from optparse import OptionParser
 
-from learner import learn
+from learner import Learner
+from corpus import get_alphabet, read_corpus, normalize_corpus, read_dict
+from automaton import Automaton
 
-def main(options) :
-    learn(options)
+def main(options):
+    # TODO refactor unreadable if branches
+    corpus = read_corpus(sys.stdin, options.separator)
+    corpus = normalize_corpus(corpus)
+
+    alphabet = get_alphabet(corpus)
+
+    if options.initial_transitions:
+        initial_transitions = Automaton.read_transitions(options.initial_transitions)
+        
+    if options.emitfile:
+        numbers_per_letters = read_dict(open(options.emitfile))
+        if set(numbers_per_letters.keys()) != set(alphabet.keys()):
+            raise Exception("File in wrong format describing emitter states")
+
+        automaton = Automaton.create_uniform_automaton(
+            numbers_per_letters, initial_transitions=initial_transitions)
+    elif options.init_from_corpus:
+        automaton = Automaton.create_from_corpus(corpus)
+        #logg( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
+        automaton.smooth()
+        #logg( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
+    else:
+        alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
+        if options.num_epsilons > 0:
+            # adding states for epsilon emission
+            alphabet_numstate["EPSILON"] = options.num_epsilons
+        automaton = Automaton.create_uniform_automaton(
+            alphabet_numstate, initial_transitions=initial_transitions)
+
+    #dumpAutomaton(automaton)
+    learner = Learner.create_from_options(automaton, corpus, options)
+    learner.learn()
 
 def optparser():
     parser = OptionParser()
@@ -26,7 +60,7 @@ def optparser():
     parser.add_option("-s", "--separator",dest="separator", type="str",
                       help="separator of letters in string (allows using complex letters, ie. labels)",
                       metavar="SEPARATOR", default="")
-    parser.add_option("-c", "--from-corpus", dest="init_from_corpus", action="store_true",
+    parser.add_option("-c", "--from-corpus", dest="init_from_corpus", action="store_true", default=False,
                       help="initialize the automaton from corpus frequencies with smoothing")
     parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
                       metavar="PROBABILITY", default=None, type="float",

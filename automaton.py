@@ -240,7 +240,7 @@ class Automaton:
     def l1err(p1, p2):
         return abs(p1 - p2)
 
-    def distance(self, corpus, distfp):
+    def distance_from_corpus(self, corpus, distfp):
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, prob in corpus.iteritems() :
@@ -287,6 +287,8 @@ class Automaton:
         self.normalize_node(self.m[n1])
 
     def dump(self) :
+        # TODO logging
+        raise Exception("Not implemented")
         nodes = sorted(self.m.keys())
         for n1 in nodes:
             for n2 in nodes + ['$']:
