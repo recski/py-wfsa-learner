@@ -32,7 +32,7 @@ class Learner(object):
         self.automaton = automaton
         self.corpus = corpus
 
-        self.distfp = Automaton.getattr(distfp)
+        self.distfp = getattr(Automaton, distfp)
         self.factor = factor
         #self.preferred_node_pair = None
         #self.preferred_direction = None

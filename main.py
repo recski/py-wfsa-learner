@@ -14,6 +14,7 @@ def main(options):
 
     alphabet = get_alphabet(corpus)
 
+    initial_transitions = None
     if options.initial_transitions:
         initial_transitions = Automaton.read_transitions(options.initial_transitions)
         

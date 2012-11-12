@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from misc import closure_and_top_sort
 
-class Automaton:
+class Automaton(object):
 
     def __init__(self) :
         # the transitions
@@ -93,9 +93,6 @@ class Automaton:
             if s1 == '$':
                 continue
 
-            valid_next_states = [s2 for s2 in states
-                                 if Automaton.is_valid_transition(s1, s2) ]
-
             init_total = 0.0
             states_initialized = set()
             if initial_transitions and s1 in initial_transitions:
@@ -111,6 +108,8 @@ class Automaton:
                         raise Exception("Two much probability for init_total")
 
             # divide up remaining mass into equal parts
+            valid_next_states = set([s2 for s2 in states
+                                 if Automaton.is_valid_transition(s1, s2)])
             u = (1.0 - init_total) / (len(valid_next_states) - len(states_initialized))
             for s2 in valid_next_states - states_initialized:
                 automaton.m[s1][s2] = u
@@ -145,6 +144,7 @@ class Automaton:
     def is_epsilon_state(state):
         return state.startswith("EPSILON_")
 
+    @staticmethod
     def is_valid_transition(state1, state2):
         # subsequent non emitting states are not allowed
         # the only exception is '^' -> '$'
