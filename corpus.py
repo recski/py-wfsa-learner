@@ -67,14 +67,14 @@ def read_dict(stream, silent=False):
         d[le[0]] = int(le[1])
     return d
 
-def getAlphabet(corpus) :
+def get_alphabet(corpus) :
     alphabet = defaultdict(int)
     for w in corpus.keys() :
         for c in w :
             alphabet[c] += 1
     return alphabet
 
-def normalizeCorpus(corpus) :
+def normalize_corpus(corpus) :
     total = sum( corpus.values() )
     for item,cnt in corpus.iteritems() :
         corpus[item] = float(cnt)/total
