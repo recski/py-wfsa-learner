@@ -3,6 +3,7 @@
 
 import math
 from collections import defaultdict
+import logging
 
 from misc import closure_and_top_sort
 
@@ -176,7 +177,8 @@ class Automaton(object):
         """
 
         if len(string)==0 :
-            return self.m["^"][state]
+            memo[string][state] = self.m["^"][state]
+            return
 
         head = string[:-1]
         tail = string[-1]
@@ -201,12 +203,16 @@ class Automaton(object):
         states = set(self.m.keys())
         states.add("$")
         states.remove("^")
+        logging.debug(string)
+        logging.debug(memo)
 
         # first compute the epsilon states probs because of the
         # memoization dependency
         for state in sorted(states,
                      key=lambda x: not Automaton.is_epsilon_state(x)):
+            logging.debug(state)
             self.update_probability_of_string_in_state(string, state, memo)
+            logging.debug(memo)
 
     def probability_of_strings(self, strings) :
         """
@@ -288,7 +294,7 @@ class Automaton(object):
 
     def dump(self) :
         # TODO logging
-        raise Exception("Not implemented")
+        #raise Exception("Not implemented")
         nodes = sorted(self.m.keys())
         for n1 in nodes:
             for n2 in nodes + ['$']:
