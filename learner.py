@@ -18,7 +18,7 @@ from automaton import Automaton
 # (< 0 decrease, > 0 increase)
 # separate class
 class Learner(object):
-    def __init__(self, automaton, corpus, pref_prob, turns_for_each, distfp, factor=0.97, start_temp=1e-5, end_temp=1e-7, tempq=0.9):
+    def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
         """
         @param corpus: needs to be normalized with corpus.normalize_corpus()
         @TODO params
@@ -41,8 +41,9 @@ class Learner(object):
     @staticmethod
     def create_from_options(automaton, corpus, options):
         return Learner(automaton, corpus, pref_prob=options.downhill_factor,
-                       turns_for_each=options.iter, distfp=options.distfp,
-                       tempq=options.tempq, factor=options.factor)
+                       distfp=options.distfp, turns_for_each=options.iter,
+                       factor=options.factor, start_temp=options.start_temp,
+                       end_temp=options.end_temp, tempq=options.tempq)
 
     def change_automaton(self, preferred_node_pair, preferred_direction,
                         disallowed_node_pair):
@@ -106,6 +107,11 @@ class Learner(object):
         preferred_direction = None
         disallowed_node_pair = None
         while True:
+            if turn_count == 0:
+                logging.info("Running an iteration of Simulated Annealing with " +
+                             "{0} temperature and at {1} energy level.".format(
+                             temperature, energy))
+            print turn_count
             if self.preference_probability:
                 preferred_node_pair = last_improving_edge
                 preferred_direction = last_improving_direction
@@ -139,6 +145,7 @@ class Learner(object):
 
             turn_count += 1
             if turn_count == self.turns_for_each:
+                print "AAA"
                 # print "-----"
                 #print temperature,"\t",energy
                 #sys.stdout.flush()

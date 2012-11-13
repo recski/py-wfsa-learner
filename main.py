@@ -49,9 +49,13 @@ def optparser():
                       metavar="FACTOR", default=0.97, type="float")
     parser.add_option("-t", "--tempq",dest="tempq", default=0.9, type="float",
                       help="temperature quotient", metavar="TEMPQ")
+    parser.add_option("", "--start_temp",dest="start_temp", default=1e-5,
+                      type="float", help="start temperature", metavar="TEMP")
+    parser.add_option("", "--end_temp",dest="end_temp", default=1e-7,
+                      type="float", help="end temperature", metavar="TEMP")
     parser.add_option("-n", "--num_of_states",dest="numstate", type="int", default=1,
                       help="number of states per letter of alphabet", metavar="N")
-    parser.add_option("-i", "--iter",dest="iter", type="int",
+    parser.add_option("-i", "--iter",dest="iter", type="int", default=500,
                       help="number of iterations per temperature", metavar="I")
     parser.add_option("-d", "--distance",dest="distfp", help="distance method",
                       metavar="I", type="choice",
