@@ -41,7 +41,8 @@ def main(options):
 
     #automaton.dump()
     learner = Learner.create_from_options(automaton, corpus, options)
-    learner.learn()
+    learner.main()
+    #learner.learn()
 
 def optparser():
     parser = OptionParser()
