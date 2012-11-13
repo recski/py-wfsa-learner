@@ -206,7 +206,7 @@ class Automaton(object):
         # memoization dependency
         for state in sorted(states,
                      key=lambda x: not Automaton.is_epsilon_state(x)):
-            self.probability_of_string_in_state(string, state, memo)
+            self.update_probability_of_string_in_state(string, state, memo)
 
     def probability_of_strings(self, strings) :
         """
