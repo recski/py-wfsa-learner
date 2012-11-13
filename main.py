@@ -2,6 +2,7 @@
 
 import sys
 from optparse import OptionParser
+import logging
 
 from learner import Learner
 from corpus import get_alphabet, read_corpus, normalize_corpus, read_dict
@@ -38,7 +39,7 @@ def main(options):
         automaton = Automaton.create_uniform_automaton(
             alphabet_numstate, initial_transitions=initial_transitions)
 
-    #dumpAutomaton(automaton)
+    #automaton.dump()
     learner = Learner.create_from_options(automaton, corpus, options)
     learner.learn()
 
@@ -83,4 +84,5 @@ def optparser():
 
 if __name__ == "__main__":
     options = optparser()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     main(options)
