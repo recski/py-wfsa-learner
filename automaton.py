@@ -287,8 +287,9 @@ class Automaton(object):
                 raise Exception("Edges sum up to too much")
             
 	        
-    def boost_edge(self, n1, n2, factor):
+    def boost_edge(self, edge, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""
+        n1, n2 = edge
         self.m[n1][n2] *= factor
         self.normalize_node(self.m[n1])
 
