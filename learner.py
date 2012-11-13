@@ -1,9 +1,3 @@
-# TODO file structure:
-# corpus
-# automaton
-# learner
-# main
-
 # TODO use log prob 
 # 
 
@@ -111,7 +105,6 @@ class Learner(object):
                 logging.info("Running an iteration of Simulated Annealing with " +
                              "{0} temperature and at {1} energy level.".format(
                              temperature, energy))
-            print turn_count
             if self.preference_probability:
                 preferred_node_pair = last_improving_edge
                 preferred_direction = last_improving_direction
@@ -141,20 +134,18 @@ class Learner(object):
                 automaton2 = copy.deepcopy(self.automaton)
                 energy = new_energy
             else:
-                automaton = copy.deepcopy(automaton2)
+                self.automaton = copy.deepcopy(automaton2)
 
             turn_count += 1
             if turn_count == self.turns_for_each:
-                print "AAA"
                 # print "-----"
                 #print temperature,"\t",energy
                 #sys.stdout.flush()
-                logging.info("%s\t%s" % (temperature,energy))
-                # dumpAutomaton(automaton)
+                # dumpAutomaton(self.automaton)
                 turn_count = 0
                 temperature *= self.temp_quotient
-                if temperature < self.end_temp:
+                if temperature < self.end_temperature:
                     break
 
-        automaton.dump()
+        self.automaton.dump()
 
