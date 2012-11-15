@@ -151,8 +151,11 @@ class Automaton(object):
         # the only exception is '^' -> '$'
         if (state1, state2) == ('^', '$'):
             return True
-        return not (Automaton.nonemitting(state1) and Automaton.nonemitting(state2)) and \
-           not state2 == '^' and not state1 == "$" 
+        return (
+            not (Automaton.nonemitting(state1)
+                 and Automaton.nonemitting(state2))
+            and not state2 == '^'
+            and not state1 == "$")
 
     @staticmethod
     def nonemitting(state) :
@@ -161,13 +164,12 @@ class Automaton(object):
     def emittors(self, letter):
         return self.m_emittors[letter]
 
-    def copy(self) :
-        # TODO
-        a2 = Automaton()
-        a2.m = self.m.copy()
-        a2.emissions = self.emissions.copy()
-        a2.m_emittors = self.m_emittors.copy()
-        return a2
+#    def copy(self) :
+#        a2 = Automaton()
+#        a2.m = self.m.copy()
+#        a2.emissions = self.emissions.copy()
+#        a2.m_emittors = self.m_emittors.copy()
+#        return a2
 
     def update_probability_of_string_in_state(self, string, state, memo):
         """The probability of the event that the automaton emits
@@ -184,18 +186,19 @@ class Automaton(object):
         tail = string[-1]
         total = 0.0
         # compute real emissions
-        for previousState in self.emittors(tail) :
+        for previousState in self.emittors(tail):
             soFar = memo[head][previousState]
             soFar *= self.m[previousState][state]
             total += soFar
 
         # check the case of epsilon emission
-        for epsilonState in self.emittors("EPSILON"):
-            # we already have this value because epsilon states
-            # came first
-            soFar = memo[string][epsilonState]
-            soFar *= self.m[epsilonState][state]
-            total += soFar
+        if not Automaton.nonemitting(state):
+            for epsilonState in self.emittors("EPSILON"):
+                # we already have this value because epsilon states
+                # came first
+                soFar = memo[string][epsilonState]
+                soFar *= self.m[epsilonState][state]
+                total += soFar
         memo[string][state] = total
 
     def update_probability_of_string(self, string, memo) :
@@ -293,14 +296,13 @@ class Automaton(object):
         self.m[n1][n2] *= factor
         self.normalize_node(self.m[n1])
 
-    def dump(self) :
-        # TODO logging
+    def dump(self, f):
         #raise Exception("Not implemented")
         nodes = sorted(self.m.keys())
         for n1 in nodes:
             for n2 in nodes + ['$']:
                 if n2 in self.m[n1]:
-                    print n1, n2, self.m[n1][n2]
+                    f.write("{0} -> {1}: {2}\n".format(n1, n2, self.m[n1][n2]))
         for n1, em in self.emissions.iteritems():
-            print ">",n1,em
+            f.write("{0}: \"{1}\"\n".format(n1, em))
 
