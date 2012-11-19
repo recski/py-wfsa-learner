@@ -41,7 +41,7 @@ class Automaton(object):
                 raise ValueError("invalid probabilities in {0}".format(
                     filename))
 
-            tr[state1][state2] = float(prob)
+            tr[state1][state2] = math.log(float(prob))
         f.close()
         return tr
 
@@ -102,7 +102,7 @@ class Automaton(object):
                         raise Exception("invalid state name in init: %s" % s2)
 
                     prob = initial_transitions[s1][s2]
-                    automaton.m[s1][s2] = prob
+                    automaton.m[s1][s2] = math.log(prob)
                     init_total += prob
                     states_initialized.add(s2)
                     if init_total > 1.0:
@@ -113,7 +113,7 @@ class Automaton(object):
                                  if Automaton.is_valid_transition(s1, s2)])
             u = (1.0 - init_total) / (len(valid_next_states) - len(states_initialized))
             for s2 in valid_next_states - states_initialized:
-                automaton.m[s1][s2] = u
+                automaton.m[s1][s2] = math.log(u)
                 
         return automaton
                 
@@ -124,6 +124,7 @@ class Automaton(object):
         """
         automaton = Automaton()
         alphabet = set()
+        total = float(sum(corpus.itervalues()))
         for item, cnt in corpus.iteritems() :
             if type(item) == str:
                 item = '^' + item + '$'
@@ -133,10 +134,10 @@ class Automaton(object):
             for i in range(len(item)-1) :
                 alphabet.add(item[i])
                 alphabet.add(item[i+1])
-                automaton.m[item[i]][item[i+1]] += cnt
-        for n1, value in automaton.m.iteritems() :
+                automaton.m[item[i]][item[i+1]] += cnt / total
+        for n1, value in automaton.m.iteritems():
             automaton.normalize_node(n1)
-        for l in alphabet :
+        for l in alphabet:
             automaton.emissions[l] = l
             automaton.m_emittors[l].add(l)
         return automaton
@@ -179,17 +180,19 @@ class Automaton(object):
         """
 
         if len(string)==0 :
-            memo[string][state] = self.m["^"][state]
+            if not Automaton.is_epsilon_state(state):
+                memo[string][state] = self.m["^"][state]
             return
 
         head = string[:-1]
         tail = string[-1]
-        total = 0.0
+        total = float("-inf")
         # compute real emissions
         for previousState in self.emittors(tail):
             soFar = memo[head][previousState]
-            soFar *= self.m[previousState][state]
-            total += soFar
+            soFar += self.m[previousState][state]
+            total = max(soFar, total)
+            #total = math.log(math.exp(soFar) + math.exp(total))
 
         # check the case of epsilon emission
         if not Automaton.nonemitting(state):
@@ -197,8 +200,9 @@ class Automaton(object):
                 # we already have this value because epsilon states
                 # came first
                 soFar = memo[string][epsilonState]
-                soFar *= self.m[epsilonState][state]
-                total += soFar
+                soFar += self.m[epsilonState][state]
+                total = max(soFar, total)
+                #total = math.log(math.exp(soFar) + math.exp(total))
         memo[string][state] = total
 
     def update_probability_of_string(self, string, memo) :
@@ -254,7 +258,7 @@ class Automaton(object):
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, prob in corpus.iteritems() :
             if prob>0 :
-                modeledProb = probs[item]
+                modeledProb = math.exp(probs[item])
                 if modeledProb==0.0 :
                     modeledProb = 1e-10
                     raise Exception("nem kene ezt kezelni?")
@@ -262,20 +266,20 @@ class Automaton(object):
         return distance
 
     def normalize_node(self, edges):
-        total = sum(edges.values())
-        for n2 in edges.keys() :
-            edges[n2] /= total
+        total_log = math.log(sum(math.exp(v) for v in edges.values()))
+        for n2 in edges.keys():
+            edges[n2] -= total_log
 
     def smooth(self):
         """Smooth zero transition probabilities"""
         for state, edges in self.m.iteritems():
-            total = sum(edges.values())
+            total_log = math.log(sum(math.exp(v) for v in edges.values()))
             added = 0
             eps = 1E-4
             for other_state in edges:
-                old_val = edges.get(other_state, 0.0)
+                old_val = math.exp(edges.get(other_state, float("-inf")))
                 if old_val < eps:
-                    edges[other_state] = eps
+                    edges[other_state] = math.log(eps)
                     added += eps - old_val
                 if added >= 1.0:
                     raise Exception("Too much probability " +
@@ -283,17 +287,16 @@ class Automaton(object):
 
             # normalize the nodes that haven't been smoothed
             for n in edges:
-                if edges[n] > eps:
-                    edges[n] /= total / (1 - added)
+                if edges[n] > math.log(eps):
+                    edges[n] -= total_log - math.log(1 - added)
 
             if abs(sum(edges.values()) - 1.0) > eps:
                 raise Exception("Edges sum up to too much")
-            
 	        
     def boost_edge(self, edge, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""
         n1, n2 = edge
-        self.m[n1][n2] *= factor
+        self.m[n1][n2] += math.log(factor)
         self.normalize_node(self.m[n1])
 
     def dump(self, f):
@@ -302,7 +305,8 @@ class Automaton(object):
         for n1 in nodes:
             for n2 in nodes + ['$']:
                 if n2 in self.m[n1]:
-                    f.write("{0} -> {1}: {2}\n".format(n1, n2, self.m[n1][n2]))
+                    f.write("{0} -> {1}: {2}\n".format(
+                        n1, n2, math.exp(self.m[n1][n2])))
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
 
