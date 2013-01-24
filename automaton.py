@@ -41,7 +41,7 @@ class Automaton(object):
                 raise ValueError("invalid probabilities in {0}".format(
                     filename))
 
-            tr[state1][state2] = math.log(float(prob))
+            tr[state1][state2] = prob
         f.close()
         return tr
 
