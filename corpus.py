@@ -39,10 +39,10 @@ def read_corpus(stream, separator=None, silent=False):
             key = tuple(a[0].split(separator))
         else:
             key = a[0]
-            if len(a)==1 :
-                corpus[key] += 1
-            else :
-                corpus[key] += int(a[1])
+        if len(a)==1 :
+            corpus[key] += 1
+        else :
+            corpus[key] += int(a[1])
     return corpus
 
 def read_dict(stream, silent=False):
