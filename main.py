@@ -31,6 +31,8 @@ def main(options):
         #logg( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
         automaton.smooth()
         #logg( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
+        #automaton.dump(sys.stdout)
+        #quit()
     else:
         alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
         if options.num_epsilons > 0:
@@ -39,7 +41,7 @@ def main(options):
         automaton = Automaton.create_uniform_automaton(
             alphabet_numstate, initial_transitions=initial_transitions)
 
-    #automaton.dump()
+    automaton.change_defaultdict_to_dict()
     learner = Learner.create_from_options(automaton, corpus, options)
     learner.main()
     #learner.learn()
@@ -91,3 +93,5 @@ if __name__ == "__main__":
     options = optparser()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     main(options)
+    #import cProfile
+    #cProfile.run("main(options)")

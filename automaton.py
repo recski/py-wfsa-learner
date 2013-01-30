@@ -1,6 +1,6 @@
 # TODO use log prob 
 # 
-
+import sys
 import math
 from collections import defaultdict
 import logging
@@ -13,6 +13,7 @@ class Automaton(object):
         # the transitions
         self.m = defaultdict(lambda: defaultdict(float))
 
+        #self.m = defaultdict(dict)
         # emissions for the states
         self.emissions = {}
         self.m_emittors = defaultdict(set)
@@ -102,18 +103,33 @@ class Automaton(object):
                         raise Exception("invalid state name in init: %s" % s2)
 
                     prob = initial_transitions[s1][s2]
-                    automaton.m[s1][s2] = math.log(prob)
+                    try:
+                        automaton.m[s1][s2] = math.log(prob)
+                    except ValueError:
+                        automaton.m[s1][s2] = float("-inf")
                     init_total += prob
                     states_initialized.add(s2)
-                    if init_total > 1.0:
-                        raise Exception("Two much probability for init_total")
+                    if init_total > 1.0000001:
+                        sys.stderr.write("state: {0}, init total: {1}\n".format(s1, init_total))
+                        raise Exception("Too much probability for init_total")
+
 
             # divide up remaining mass into equal parts
             valid_next_states = set([s2 for s2 in states
                                  if Automaton.is_valid_transition(s1, s2)])
+            
+            if valid_next_states == states_initialized:
+                continue
+
+            #sys.stderr.write('{0} {1}\n'.format(s1, valid_next_states))
             u = (1.0 - init_total) / (len(valid_next_states) - len(states_initialized))
             for s2 in valid_next_states - states_initialized:
-                automaton.m[s1][s2] = math.log(u)
+                #sys.stderr.write(s2)
+                #sys.stderr.write('foo')
+                try:
+                    automaton.m[s1][s2] = math.log(u)
+                except ValueError:
+                    automaton.m[s1][s2] = float("-inf")
                 
         return automaton
                 
@@ -135,8 +151,11 @@ class Automaton(object):
                 alphabet.add(item[i])
                 alphabet.add(item[i+1])
                 automaton.m[item[i]][item[i+1]] += cnt / total
+        for item1 in automaton.m.iterkeys():
+            for item2 in automaton.m[item1].iterkeys():
+                automaton.m[item1][item2] = math.log(automaton.m[item1][item2])
         for n1, value in automaton.m.iteritems():
-            automaton.normalize_node(n1)
+            automaton.normalize_node(value)
         for l in alphabet:
             automaton.emissions[l] = l
             automaton.m_emittors[l].add(l)
@@ -162,6 +181,11 @@ class Automaton(object):
     def nonemitting(state) :
         return state=="^" or state=="$" or Automaton.is_epsilon_state(state)
 
+    def change_defaultdict_to_dict(self):
+        for state1, transitions in self.m.iteritems():
+            self.m[state1] = dict(transitions)
+        self.m = dict(self.m)
+    
     def emittors(self, letter):
         return self.m_emittors[letter]
 
@@ -178,9 +202,9 @@ class Automaton(object):
         'state' did not emit yet:
         It will emit the next symbol following 'string'.
         """
-
+        
         if len(string)==0 :
-            if not Automaton.is_epsilon_state(state):
+            if not Automaton.is_epsilon_state(state) and self.m["^"].has_key(state):
                 memo[string][state] = self.m["^"][state]
             return
 
@@ -190,7 +214,10 @@ class Automaton(object):
         # compute real emissions
         for previousState in self.emittors(tail):
             soFar = memo[head][previousState]
-            soFar += self.m[previousState][state]
+            try:
+                soFar += self.m[previousState][state]
+            except KeyError:
+                soFar = float("-inf")
             total = max(soFar, total)
             #total = math.log(math.exp(soFar) + math.exp(total))
 
@@ -259,16 +286,21 @@ class Automaton(object):
         for item, prob in corpus.iteritems() :
             if prob>0 :
                 modeledProb = math.exp(probs[item])
-                if modeledProb==0.0 :
-                    modeledProb = 1e-10
-                    raise Exception("nem kene ezt kezelni?")
+                #if modeledProb==0.0 :
+                    #modeledProb = 1e-10
+                    #raise Exception("nem kene ezt kezelni?")
+                #nem, kezelje a distance metrika
                 distance += distfp(prob, modeledProb)
         return distance
 
     def normalize_node(self, edges):
+        #print edges
         total_log = math.log(sum(math.exp(v) for v in edges.values()))
+        #print total_log
         for n2 in edges.keys():
             edges[n2] -= total_log
+        #print edges
+        #quit()
 
     def smooth(self):
         """Smooth zero transition probabilities"""
@@ -290,8 +322,8 @@ class Automaton(object):
                 if edges[n] > math.log(eps):
                     edges[n] -= total_log - math.log(1 - added)
 
-            if abs(sum(edges.values()) - 1.0) > eps:
-                raise Exception("Edges sum up to too much")
+            #if abs(sum(edges.values()) - 1.0) > eps:
+            #    raise Exception("Edges sum up to too much")
 	        
     def boost_edge(self, edge, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""

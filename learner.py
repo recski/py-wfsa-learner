@@ -127,7 +127,10 @@ class Learner(object):
         tempq = self.temp_quotient
         turns_for_each_temp = self.turns_for_each
 
+        #self.automaton.dump(sys.stdout)
         energy = compute_energy()
+        #self.automaton.dump(sys.stdout)
+        #quit()
         turn_count = 0
         while True:
             if turn_count == 0:
