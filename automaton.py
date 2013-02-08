@@ -45,7 +45,29 @@ class Automaton(object):
             tr[state1][state2] = prob
         f.close()
         return tr
+    
+    @staticmethod
+    def create_from_dump(file_name):
+        """ Reads automaton dump from @file_name"""
+        automaton = Automaton()
+        # create states and emissions
+        for line in open(file_name):
+            l = line.strip().split()
+            if len(l) != 4: continue
+            s1, _, s2, weight = l
+            s2 = s2.strip(':')
+            weight = float(weight)
+            automaton.emissions[s1] = s1[:-2]
+            automaton.m_emittors[s1[:-2]].add(s1)
+            automaton.emissions[s2] = s2[:-2]
+            automaton.m_emittors[s2[:-2]].add(s2)
+            try:
+                automaton.m[s1][s2] = math.log(weight)
+            except ValueError:
+                automaton.m[s1][s2] = float("-inf")
 
+        return automaton
+    
     @staticmethod
     def _create_automaton_from_alphabet(alphabet):
         """ Creates states of the automaton given by @alphabet
@@ -270,6 +292,8 @@ class Automaton(object):
 
     @staticmethod
     def kullback(p1, p2):
+        if p1 == 0:
+            return 0
         return p1 * math.log(p1/p2)
 
     @staticmethod
@@ -283,14 +307,18 @@ class Automaton(object):
     def distance_from_corpus(self, corpus, distfp):
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
-        for item, prob in corpus.iteritems() :
+        for item, prob in corpus.iteritems():
             if prob>0 :
                 modeledProb = math.exp(probs[item])
-                #if modeledProb==0.0 :
-                    #modeledProb = 1e-10
+                if modeledProb==0.0 :
+                    #print item, probs[item]
+                    modeledProb = 1e-555550
                     #raise Exception("nem kene ezt kezelni?")
-                #nem, kezelje a distance metrika
+                    #egyelore nem
+                #print prob, modeledProb
+                #quit()
                 distance += distfp(prob, modeledProb)
+                #print distance
         return distance
 
     def normalize_node(self, edges):

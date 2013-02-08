@@ -8,6 +8,28 @@ from learner import Learner
 from corpus import get_alphabet, read_corpus, normalize_corpus, read_dict
 from automaton import Automaton
 
+#words_to_add = ['hogy', 'miErt', 'honnan', 'mikor', 'mely', 'hovA', 'mi', 'milyen', 'melyik', 'meddig', 'hol', 'hova', 'mennyi', 'honnEt', 'ki']
+
+words_to_add = ['hogy']
+
+#words_to_add = []
+
+def add_word(word, o_prob, alphabet_numstate, initial_transitions):
+    alphabet_numstate[word]+=1
+    initial_transitions[word+'_1'] = {'$':1}
+    word_prob = o_prob*initial_transitions['@_0'][word+'_0']
+    initial_transitions['^'][word+'_1'] = word_prob*0.9
+    #sys.stderr.write('word: {0}\n'.format(word))
+    #sys.stderr.write('prob: {0}\n'.format(word_prob))
+    initial_transitions['^']['O_0'] -= word_prob*0.9
+    #sys.stderr.write('new O-prob: {0}\n'.format(initial_transitions['^']['O_0']))
+    for state, transitions in initial_transitions.iteritems():
+        if not transitions.has_key(word+'_1'):
+            transitions[word+'_1'] = 0
+        if state!='$':
+            initial_transitions[word+'_1'][state] = 0
+    return alphabet_numstate, initial_transitions
+
 def main(options):
     # TODO refactor unreadable if branches
     corpus = read_corpus(sys.stdin, options.separator)
@@ -35,12 +57,25 @@ def main(options):
         #quit()
     else:
         alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
+        #!!! manual change
+        o_prob = initial_transitions['^']['O_0']
+        for word in words_to_add:
+            alphabet_numstate, initial_transitions = \
+                add_word(word, o_prob, alphabet_numstate, initial_transitions)
+        #!!! end of manual change
+
         if options.num_epsilons > 0:
             # adding states for epsilon emission
             alphabet_numstate["EPSILON"] = options.num_epsilons
         automaton = Automaton.create_uniform_automaton(
             alphabet_numstate, initial_transitions=initial_transitions)
-
+        #!temporary
+        automaton.smooth()
+    distfp = getattr(Automaton, options.distfp)
+    sys.stderr.write('starting energy level: {0}\n'.format(
+          automaton.distance_from_corpus(corpus, distfp)))
+    #automaton.dump(sys.stdout)
+    #quit()
     automaton.change_defaultdict_to_dict()
     learner = Learner.create_from_options(automaton, corpus, options)
     learner.main()
