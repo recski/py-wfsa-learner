@@ -61,10 +61,7 @@ class Automaton(object):
             automaton.m_emittors[s1[:-2]].add(s1)
             automaton.emissions[s2] = s2[:-2]
             automaton.m_emittors[s2[:-2]].add(s2)
-            try:
-                automaton.m[s1][s2] = math.log(weight)
-            except ValueError:
-                automaton.m[s1][s2] = float("-inf")
+            automaton.m[s1][s2] = Automaton.my_log(weight)
 
         return automaton
     
@@ -177,6 +174,7 @@ class Automaton(object):
             for item2 in automaton.m[item1].iterkeys():
                 automaton.m[item1][item2] = math.log(automaton.m[item1][item2])
         for n1, value in automaton.m.iteritems():
+            #TODO ezt ugye ki lehet venni?
             automaton.normalize_node(value)
         for l in alphabet:
             automaton.emissions[l] = l
@@ -312,7 +310,7 @@ class Automaton(object):
                 modeledProb = math.exp(probs[item])
                 if modeledProb==0.0 :
                     #print item, probs[item]
-                    modeledProb = 1e-555550
+                    modeledProb = 1e-50
                     #raise Exception("nem kene ezt kezelni?")
                     #egyelore nem
                 #print prob, modeledProb
@@ -320,6 +318,11 @@ class Automaton(object):
                 distance += distfp(prob, modeledProb)
                 #print distance
         return distance
+
+    def round_and_normalize_node(self, edges):
+        if self.bit_no:
+            edges = Automaton.round_transitions(edges, self.bit_no) 
+        self.normalize_node(edges)
 
     def normalize_node(self, edges):
         #print edges
@@ -329,6 +332,10 @@ class Automaton(object):
             edges[n2] -= total_log
         #print edges
         #quit()
+    
+    def round_and_normalize(self):
+        for state, edges in self.m.iteritems():
+            self.round_and_normalize_node(edges)
 
     def smooth(self):
         """Smooth zero transition probabilities"""
@@ -357,7 +364,7 @@ class Automaton(object):
         """Multiplies the transition probability between n1 and n2 by factor"""
         n1, n2 = edge
         self.m[n1][n2] += math.log(factor)
-        self.normalize_node(self.m[n1])
+        self.round_and_normalize_node(self.m[n1])
 
     def dump(self, f):
         #raise Exception("Not implemented")
@@ -369,4 +376,49 @@ class Automaton(object):
                         n1, n2, math.exp(self.m[n1][n2])))
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
+
+    
+    @staticmethod
+    def round_transitions(transitions, bit_no):
+        tr_by_weight = [(math.exp(log_weight), state)
+                        for (state, log_weight) in transitions.iteritems()]
+        tr_by_weight.sort()
+        tr_by_weight.reverse()
+        largest_prob, largest_prob_state = tr_by_weight[0]
+        rounded_transitions = dict([(state, Automaton.round_32(weight, bit_no))
+                                    for (weight, state) in tr_by_weight[1:]])
+        #print sum(rounded_transitions.values())
+        new_largest_prob = 1-sum(rounded_transitions.values())
+        #if new_largest_prob < 1:
+        #    print state1, largest_prob_state, largest_prob, new_largest_prob
+        #if largest_prob<0:
+        #    print largest_prob_state, foo, largest_prob
+        #    for state, weight in rounded_transitions.iteritems():
+        #        print state, weight
+        #    quit()
+        rounded_transitions[largest_prob_state] = new_largest_prob
+        rounded_transitions = dict([(state, Automaton.my_log(weight))
+                                    for state, weight in
+                                    rounded_transitions.iteritems()])
+        return rounded_transitions
+
+    @staticmethod
+    def my_log(x):
+        if x == 0:
+            return float('-inf')
+        else:
+            return math.log(x)
+
+    @staticmethod
+    def bit_round(x, n):
+        return round(x*((2**n)-1))/((2**n)-1)
+
+    @staticmethod
+    def round_32(weight, bit_no):
+        if weight in (0, 1): return weight
+        to_round = math.log(weight)/-32
+        rounded = Automaton.bit_round(to_round, bit_no)
+        rounded_weight = math.exp(rounded*-32)
+        return rounded_weight
+    
 

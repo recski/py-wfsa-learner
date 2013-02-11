@@ -70,9 +70,18 @@ def main(options):
         automaton = Automaton.create_uniform_automaton(
             alphabet_numstate, initial_transitions=initial_transitions)
         #!temporary
-        automaton.smooth()
+        #automaton.smooth()
+    
+    automaton.bit_no = options.bit_no
+    automaton.round_and_normalize()
+    start_dump = ('start.wfsa')
+    f = open(start_dump, 'w')
+    automaton.dump(f)
+    logging.info('Automaton created and dumped to {0}.'.format(start_dump))
+    if options.bit_no:
+        logging.info('Parameters rounded to {0} bits.'.format(options.bit_no))
     distfp = getattr(Automaton, options.distfp)
-    sys.stderr.write('starting energy level: {0}\n'.format(
+    logging.info('starting energy level: {0}'.format(
           automaton.distance_from_corpus(corpus, distfp)))
     #automaton.dump(sys.stdout)
     #quit()
@@ -93,6 +102,8 @@ def optparser():
                       type="float", help="end temperature", metavar="TEMP")
     parser.add_option("-n", "--num_of_states",dest="numstate", type="int", default=1,
                       help="number of states per letter of alphabet", metavar="N")
+    parser.add_option("-b", "--bit_no",dest="bit_no", type="int", default=None,
+                      help="round parameters to B bits", metavar="B")
     parser.add_option("-i", "--iter",dest="iter", type="int", default=500,
                       help="number of iterations per temperature", metavar="I")
     parser.add_option("-d", "--distance",dest="distfp", help="distance method",
@@ -127,6 +138,6 @@ def optparser():
 if __name__ == "__main__":
     options = optparser()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
-    main(options)
-    #import cProfile
-    #cProfile.run("main(options)")
+    #main(options)
+    import cProfile
+    cProfile.run("main(options)")
