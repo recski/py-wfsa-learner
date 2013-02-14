@@ -28,6 +28,7 @@ class Automaton(object):
         # Az allapotokrol es a kibocsatasokrol is
         # csak annyit tetelezunk fel, hogy hash-elhetok,
         # de a gyakorlatban mindketto string.
+        self.code = None
 
     @staticmethod
     def read_transitions(filename):
@@ -122,7 +123,7 @@ class Automaton(object):
                         raise Exception("invalid state name in init: %s" % s2)
 
                     prob = initial_transitions[s1][s2]
-                    try:
+                    try:                      
                         automaton.m[s1][s2] = math.log(prob)
                     except ValueError:
                         automaton.m[s1][s2] = float("-inf")
@@ -320,18 +321,21 @@ class Automaton(object):
         return distance
 
     def round_and_normalize_node(self, edges):
-        if self.bit_no:
-            edges = Automaton.round_transitions(edges, self.bit_no) 
+        if self.code:
+            self.round_transitions(edges) 
         self.normalize_node(edges)
+    
+    def round_transitions(self, edges):
+        for state, weight in edges.iteritems():
+            edges[state] = self.code.quantize(weight)
 
     def normalize_node(self, edges):
-        #print edges
+        #print 'before:', edges.values()
         total_log = math.log(sum(math.exp(v) for v in edges.values()))
-        #print total_log
         for n2 in edges.keys():
             edges[n2] -= total_log
-        #print edges
-        #quit()
+        #print 'after:', edges.values()
+        print
     
     def round_and_normalize(self):
         for state, edges in self.m.iteritems():
@@ -365,6 +369,18 @@ class Automaton(object):
         n1, n2 = edge
         self.m[n1][n2] += math.log(factor)
         self.round_and_normalize_node(self.m[n1])
+        Automaton.check_node_sum(self.m[n1])
+
+    @staticmethod
+    def check_node_sum(edges):
+        epsilon = 1e-5
+        n_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
+        if n_sum < 1+epsilon and n_sum > 1-epsilon:
+            return
+        for state, weight in edges.iteritems():
+            print state, math.exp(weight)
+        logging.info("abort: transitions from state don't sum to 1, but {0}".format(n_sum))
+        sys.exit(-1)
 
     def dump(self, f):
         #raise Exception("Not implemented")
@@ -376,31 +392,11 @@ class Automaton(object):
                         n1, n2, math.exp(self.m[n1][n2])))
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
-
     
     @staticmethod
-    def round_transitions(transitions, bit_no):
-        tr_by_weight = [(math.exp(log_weight), state)
-                        for (state, log_weight) in transitions.iteritems()]
-        tr_by_weight.sort()
-        tr_by_weight.reverse()
-        largest_prob, largest_prob_state = tr_by_weight[0]
-        rounded_transitions = dict([(state, Automaton.round_32(weight, bit_no))
-                                    for (weight, state) in tr_by_weight[1:]])
-        #print sum(rounded_transitions.values())
-        new_largest_prob = 1-sum(rounded_transitions.values())
-        #if new_largest_prob < 1:
-        #    print state1, largest_prob_state, largest_prob, new_largest_prob
-        #if largest_prob<0:
-        #    print largest_prob_state, foo, largest_prob
-        #    for state, weight in rounded_transitions.iteritems():
-        #        print state, weight
-        #    quit()
-        rounded_transitions[largest_prob_state] = new_largest_prob
-        rounded_transitions = dict([(state, Automaton.my_log(weight))
-                                    for state, weight in
-                                    rounded_transitions.iteritems()])
-        return rounded_transitions
+    def dump_round(orig, round):
+        for weight, state in orig:
+            print state, weight, round[state]
 
     @staticmethod
     def my_log(x):
@@ -420,5 +416,51 @@ class Automaton(object):
         rounded = Automaton.bit_round(to_round, bit_no)
         rounded_weight = math.exp(rounded*-32)
         return rounded_weight
+
+
+class Code():
     
+    def __init__(self):
+        self.codes_to_rep = {}
+        self.intervals_to_rep = {}
+        self.intervals = []
+    
+    @staticmethod
+    def create_from_file(file_name):
+        coding = Code()
+        for line in file(file_name):
+            l = line.strip().split()
+            code, interval, rep = l[0], tuple([float(i)
+                                               for i in l[1:3]]), float(l[3])
+            if interval[1]<interval[0]:
+                print interval[1], interval[0]
+                logging.critical("malformed interval in coding file: {0}\
+                                 ".format(interval))
+                sys.exit(-1)
+            coding.codes_to_rep[code] = rep
+            coding.intervals_to_rep[interval] = rep
+            coding.intervals.append(interval)
+        coding.intervals.sort()
+        coding.min_value = coding.intervals_to_rep[coding.intervals[0]]
+        coding.max_value = coding.intervals_to_rep[coding.intervals[-1]]
+        #print coding.intervals_to_rep.values()
+        #print [math.exp(l) for l in coding.intervals_to_rep.values()]
+        return coding
+
+    def quantize(self, weight):
+        try:
+            if weight < self.intervals[0][0]: return self.min_value
+            elif weight > self.intervals[-1][1]: return self.max_value
+            for interval in self.intervals:
+                if weight < interval[1]:
+                    assert weight >= interval[0]
+                    return self.intervals_to_rep[interval]
+            if weight == self.intervals[-1][1]:
+                return self.intervals_to_rep[self.intervals[-1]]
+            logging.critical("can't round value {0}. Incomplete coding file?\
+                             ".format(weight))
+            sys.exit(-1)
+        except Exception, e:
+            logging.critical("can't round value {0}".format(weight))
+            raise e
 

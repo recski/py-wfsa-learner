@@ -6,13 +6,13 @@ import logging
 
 from learner import Learner
 from corpus import get_alphabet, read_corpus, normalize_corpus, read_dict
-from automaton import Automaton
+from automaton import Automaton, Code
 
 #words_to_add = ['hogy', 'miErt', 'honnan', 'mikor', 'mely', 'hovA', 'mi', 'milyen', 'melyik', 'meddig', 'hol', 'hova', 'mennyi', 'honnEt', 'ki']
 
-#words_to_add = ['hogy']
+words_to_add = ['hogy']
 
-words_to_add = []
+#words_to_add = []
 
 def add_word(word, o_prob, alphabet_numstate, initial_transitions):
     alphabet_numstate[word]+=1
@@ -72,14 +72,13 @@ def main(options):
         #!temporary
         #automaton.smooth()
     
-    automaton.bit_no = options.bit_no
+    if options.code:
+        automaton.code = Code.create_from_file(options.code)
     automaton.round_and_normalize()
     start_dump = ('start.wfsa')
     f = open(start_dump, 'w')
     automaton.dump(f)
     logging.info('Automaton created and dumped to {0}.'.format(start_dump))
-    if options.bit_no:
-        logging.info('Parameters rounded to {0} bits.'.format(options.bit_no))
     distfp = getattr(Automaton, options.distfp)
     logging.info('starting energy level: {0}'.format(
           automaton.distance_from_corpus(corpus, distfp)))
@@ -117,6 +116,8 @@ def optparser():
                       metavar="SEPARATOR", default="")
     parser.add_option("-c", "--from-corpus", dest="init_from_corpus", action="store_true", default=False,
                       help="initialize the automaton from corpus frequencies with smoothing")
+    parser.add_option("-o", "--code", dest="code", type="str", default=None, metavar="FILE",
+                      help="store parameters using a code specified in FILE")
     parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
                       metavar="PROBABILITY", default=None, type="float",
                       help="in random parameter selection prefer the one which improved the result in the previous iteration with PROBABILITY")
@@ -138,6 +139,6 @@ def optparser():
 if __name__ == "__main__":
     options = optparser()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
-    #main(options)
-    import cProfile
-    cProfile.run("main(options)")
+    main(options)
+    #import cProfile
+    #cProfile.run("main(options)")
