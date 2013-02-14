@@ -335,7 +335,7 @@ class Automaton(object):
         for n2 in edges.keys():
             edges[n2] -= total_log
         #print 'after:', edges.values()
-        print
+        #print
     
     def round_and_normalize(self):
         for state, edges in self.m.iteritems():
