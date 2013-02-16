@@ -371,6 +371,7 @@ class Automaton(object):
         self.round_and_normalize_node(self.m[n1])
         Automaton.check_node_sum(self.m[n1])
 
+    #obsolete
     @staticmethod
     def check_node_sum(edges):
         epsilon = 1e-5
@@ -393,11 +394,13 @@ class Automaton(object):
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
     
+    #obsolete
     @staticmethod
     def dump_round(orig, round):
         for weight, state in orig:
             print state, weight, round[state]
 
+    #obsolete
     @staticmethod
     def my_log(x):
         if x == 0:
@@ -405,10 +408,12 @@ class Automaton(object):
         else:
             return math.log(x)
 
+    #obsolete
     @staticmethod
     def bit_round(x, n):
         return round(x*((2**n)-1))/((2**n)-1)
 
+    #obsolete
     @staticmethod
     def round_32(weight, bit_no):
         if weight in (0, 1): return weight
@@ -424,7 +429,7 @@ class Code():
         self.codes_to_rep = {}
         self.intervals_to_rep = {}
         self.intervals = []
-    
+        self.bit_no = 0 
     @staticmethod
     def create_from_file(file_name):
         coding = Code()
@@ -440,6 +445,7 @@ class Code():
             coding.codes_to_rep[code] = rep
             coding.intervals_to_rep[interval] = rep
             coding.intervals.append(interval)
+        coding.bit_no = math.log(len(coding.codes_to_rep) ,2)
         coding.intervals.sort()
         coding.min_value = coding.intervals_to_rep[coding.intervals[0]]
         coding.max_value = coding.intervals_to_rep[coding.intervals[-1]]
@@ -453,7 +459,8 @@ class Code():
             elif weight > self.intervals[-1][1]: return self.max_value
             for interval in self.intervals:
                 if weight < interval[1]:
-                    assert weight >= interval[0]
+                    if not weight >= interval[0]:
+                        raise Exception()
                     return self.intervals_to_rep[interval]
             if weight == self.intervals[-1][1]:
                 return self.intervals_to_rep[self.intervals[-1]]

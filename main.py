@@ -10,9 +10,9 @@ from automaton import Automaton, Code
 
 #words_to_add = ['hogy', 'miErt', 'honnan', 'mikor', 'mely', 'hovA', 'mi', 'milyen', 'melyik', 'meddig', 'hol', 'hova', 'mennyi', 'honnEt', 'ki']
 
-words_to_add = ['hogy']
+#words_to_add = ['hogy']
 
-#words_to_add = []
+words_to_add = []
 
 def add_word(word, o_prob, alphabet_numstate, initial_transitions):
     alphabet_numstate[word]+=1
