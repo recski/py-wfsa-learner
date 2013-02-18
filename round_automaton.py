@@ -1,4 +1,4 @@
-from automaton import Automaton
+from automaton import Automaton, Code
 from round_freqs import get_error
 from corpus import read_corpus, normalize_corpus
 import math
@@ -66,9 +66,8 @@ def get_weights(automaton, discard_ones_zeros=False):
 state_no = 3
 morpheme_no = 26
 word_no = 135
-def count_mdl(automaton, r_automaton, input, file_name, bit_no):
-    corpus = read_corpus(input, '#')
-    corpus = normalize_corpus(corpus)
+
+def count_mdl(r_automaton, corpus, bit_no):
     kl_err = r_automaton.distance_from_corpus(
              corpus, getattr(Automaton, 'kullback'))
     weights = get_weights(r_automaton, discard_ones_zeros=True)
@@ -76,9 +75,10 @@ def count_mdl(automaton, r_automaton, input, file_name, bit_no):
     #    print pair, weight
     param_no = len(weights)
     err = kl_err*word_no
+    sys.stderr.write(str(kl_err)+' ')
     bit_per_param = math.log(state_no**2)+math.log(morpheme_no)+bit_no
     mdl = (param_no*bit_per_param)+err
-    print file_name, param_no, bit_no, kl_err, mdl
+    return param_no, bit_per_param, param_no*bit_per_param, kl_err, err, mdl
 
 def count_error(automaton, r_automaton, file_name, bit_no):
     a_weights = get_weights(automaton)
@@ -91,13 +91,50 @@ def count_error(automaton, r_automaton, file_name, bit_no):
         print metric_name, error,
     print
 
-def main():
+def main_old():
     bit_no = int(sys.argv[2])
     file_name = sys.argv[1]
     automaton = Automaton.create_from_dump(file_name)
     r_automaton = round_automaton(automaton, bit_no, file_name)
     count_mdl(automaton, r_automaton, sys.stdin, file_name, bit_no)
     #count_error(automaton, r_automaton, file_name, bit_no)
-    
+
+def main():
+    corpus = read_corpus(sys.stdin, '#')
+    corpus = normalize_corpus(corpus)
+    automaton = Automaton.create_from_dump(sys.argv[1])
+    automaton.code = Code.create_from_file(sys.argv[2])
+    automaton.round_and_normalize()
+    param_no, bit_per_param, bits, kl_err, err, mdl = count_mdl(automaton, corpus, automaton.code.bit_no)
+    print 'params:', param_no, 'bit/param:', bit_per_param, 'total bits:', bits
+    print 'words:', word_no, 'kl_err:', kl_err, 'total err:', err
+    print 'mdl:', mdl
+
+def main_multi():
+    corpus = read_corpus(sys.stdin, '#')
+    corpus = normalize_corpus(corpus)
+    mdls = []
+    errs = []
+    bits = []
+    for i in range(5, 13):
+        mdls.append([])
+        errs.append([])
+        bits.append([])
+        for j in range(-4, -33, -1):
+            automaton = Automaton.create_from_dump(sys.argv[1])
+            automaton.code = Code.create_from_file("codes/{0}.{1}.code".format(i, j))
+            automaton.round_and_normalize()
+            param_no, bit_per_param, bit, kl_err, err, mdl = count_mdl(automaton, corpus, automaton.code.bit_no)
+            mdls[-1].append(mdl)
+            errs[-1].append(err)
+            bits[-1].append(bit)
+    m = open('mdls.txt', 'w')
+    m.write('\n'.join([' '.join([str(v) for v in line]) for line in mdls]))
+    m = open('errs.txt', 'w')
+    m.write('\n'.join([' '.join([str(v) for v in line]) for line in errs]))
+    m = open('bits.txt', 'w')
+    m.write('\n'.join([' '.join([str(v) for v in line]) for line in bits]))
+
 if __name__=='__main__':
+    #main_multi()
     main()

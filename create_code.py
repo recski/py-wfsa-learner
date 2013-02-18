@@ -2,10 +2,12 @@ import sys
 
 def get_values(b, c):
     return sorted([c*i/((2**b)-1) for i in range(2**b)])
+    
 
 def create_code(b, c):
     values = get_values(b, c)
-    code = bin(0)
+    print bin(0), '-inf', values[0], '-inf'
+    code = bin(1)
     for c, v in enumerate(values):
         if c == 0:
             int_start = values[0]
