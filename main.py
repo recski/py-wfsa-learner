@@ -58,10 +58,10 @@ def main(options):
     else:
         alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
         #!!! manual change
-        o_prob = initial_transitions['^']['O_0']
-        for word in words_to_add:
-            alphabet_numstate, initial_transitions = \
-                add_word(word, o_prob, alphabet_numstate, initial_transitions)
+        #o_prob = initial_transitions['^']['O_0']
+        #for word in words_to_add:
+            #alphabet_numstate, initial_transitions = \
+                #add_word(word, o_prob, alphabet_numstate, initial_transitions)
         #!!! end of manual change
 
         if options.num_epsilons > 0:
