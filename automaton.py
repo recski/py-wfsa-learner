@@ -8,6 +8,11 @@ import logging
 from misc import closure_and_top_sort
 
 class Automaton(object):
+    """ Classic Moore-automaton class with
+    @m: transitions per states
+    @emissions: emission per states
+    @m_emittors: states per emitted letter"""
+
 
     def __init__(self) :
         # the transitions
@@ -17,17 +22,8 @@ class Automaton(object):
         # emissions for the states
         self.emissions = {}
         self.m_emittors = defaultdict(set)
-        # A kibocsatas determinisztikus.
-        #
-        # By convention, for backward compatibility:
-        # ha nincs megmondva az allapothoz a kibocsatas,
-        # akkor a sajat nevet bocsatja ki.
-        # Kiveve "^" es "$", amik semmit sem bocsatanak ki.
-        # Igen, goreny convention, nem vegleges.
-        #
-        # Az allapotokrol es a kibocsatasokrol is
-        # csak annyit tetelezunk fel, hogy hash-elhetok,
-        # de a gyakorlatban mindketto string.
+
+        # how edge values can be coded
         self.code = None
 
     @staticmethod
@@ -96,7 +92,6 @@ class Automaton(object):
         If initial_transitions is given (dict of (state, dict of (state, probability),
         returned by read_transitions) the remaining probability mass will be 
         divided up among the uninitialized transitions in an uniform manner.
-
         """
 
         automaton = Automaton._create_automaton_from_alphabet(alphabet)
@@ -209,13 +204,6 @@ class Automaton(object):
     
     def emittors(self, letter):
         return self.m_emittors[letter]
-
-#    def copy(self) :
-#        a2 = Automaton()
-#        a2.m = self.m.copy()
-#        a2.emissions = self.emissions.copy()
-#        a2.m_emittors = self.m_emittors.copy()
-#        return a2
 
     def update_probability_of_string_in_state(self, string, state, memo):
         """The probability of the event that the automaton emits
@@ -421,53 +409,4 @@ class Automaton(object):
         rounded = Automaton.bit_round(to_round, bit_no)
         rounded_weight = math.exp(rounded*-32)
         return rounded_weight
-
-
-class Code():
-    
-    def __init__(self):
-        self.codes_to_rep = {}
-        self.intervals_to_rep = {}
-        self.intervals = []
-        self.bit_no = 0 
-    @staticmethod
-    def create_from_file(file_name):
-        coding = Code()
-        for line in file(file_name):
-            l = line.strip().split()
-            code, interval, rep = l[0], tuple([float(i)
-                                               for i in l[1:3]]), float(l[3])
-            if interval[1]<interval[0]:
-                print interval[1], interval[0]
-                logging.critical("malformed interval in coding file: {0}\
-                                 ".format(interval))
-                sys.exit(-1)
-            coding.codes_to_rep[code] = rep
-            coding.intervals_to_rep[interval] = rep
-            coding.intervals.append(interval)
-        coding.bit_no = math.log(len(coding.codes_to_rep) ,2)
-        coding.intervals.sort()
-        coding.min_value = coding.intervals_to_rep[coding.intervals[0]]
-        coding.max_value = coding.intervals_to_rep[coding.intervals[-1]]
-        #print coding.intervals_to_rep.values()
-        #print [math.exp(l) for l in coding.intervals_to_rep.values()]
-        return coding
-
-    def quantize(self, weight):
-        try:
-            if weight < self.intervals[0][0]: return self.min_value
-            elif weight > self.intervals[-1][1]: return self.max_value
-            for interval in self.intervals:
-                if weight < interval[1]:
-                    if not weight >= interval[0]:
-                        raise Exception()
-                    return self.intervals_to_rep[interval]
-            if weight == self.intervals[-1][1]:
-                return self.intervals_to_rep[self.intervals[-1]]
-            logging.critical("can't round value {0}. Incomplete coding file?\
-                             ".format(weight))
-            sys.exit(-1)
-        except Exception, e:
-            logging.critical("can't round value {0}".format(weight))
-            raise e
 
