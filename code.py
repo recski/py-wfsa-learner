@@ -7,10 +7,16 @@ def my_round(number, lowest, highest, bits, interval_len=None):
     # to be not at highest/lowest values. highest/lowest values will be
     # points where round() change value
 
-    lowest -= inverval_len
-    highest += interval_len
-
-    val = 
+    lowest -= interval_len / 2.0
+    highest += interval_len / 2.0
+    new_total_length = highest - lowest + interval_len
+    
+    normalized_num = number / new_total_length
+    transformed_into_new_range = normalized_num * (2 ** bits)
+    rounded_in_new_range = round(transformed_into_new_range)
+    normalized_after_round = rounded_in_new_range / (2 ** bits)
+    transformed_back_into_old_range = normalized_after_round * new_total_length
+    return transformed_back_into_old_range
 
 class AbstractCode(object):
     def __init__(self):
