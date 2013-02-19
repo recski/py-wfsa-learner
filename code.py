@@ -1,4 +1,5 @@
 import sys
+import math
 
 def my_round(number, lowest, highest, bits, interval_len=None):
     """rounding with transformation of ranges"""
@@ -22,9 +23,7 @@ def my_round(number, lowest, highest, bits, interval_len=None):
 
 class AbstractCode(object):
     def __init__(self):
-        #self.codes_to_rep = {}
-        self.rep_to_codes = {}
-        #self.intervals_to_rep = {}
+        self.rep_to_code = {}
 
     def representer(self, number):
         """returns a representer element for @number as a float"""
@@ -32,23 +31,72 @@ class AbstractCode(object):
 
     def code(self, representer):
         """returns a binary code representation of @representer"""
-        if representer in self.rep_to_codes:
-            return self.rep_to_codes[representer]
+        if representer in self.rep_to_code:
+            return self.rep_to_code[representer]
 
         # handling floating point inaccuracy
-        for known_rep in self.rep_to_codes.iterkeys():
+        for known_rep in self.rep_to_code.iterkeys():
             if abs(known_rep - representer) < 1e-7:
-                return self.rep_to_codes[known_rep]
+                return self.rep_to_code[known_rep]
 
         raise Exception("There is no code for this representer")
 
     def dump(self, ostream):
+        ostream.write("#{0}\n".format(self.__class__.__name__))
+        # after that, comes the real dump, if called
+
+    @staticmethod
+    def read(istream):
+        """ reads a Code class from a file, and depending on first line,
+        it will create one of the sublasses, with calling its read()"""
+
+class LinearCode(AbstractCode):
+    def __init__(self, bits):
+        self.bits = bits
+        self.interval_to_rep = {}
+
+    def representer(self, number):
         pass
 
     def read(self, istream):
-        pass
+        # to count bits later!
+        num_of_lines = 0
+
+        # read intervals
+        for l in istream:
+            le = l.strip().split("\t")
+            if len(le) != 4:
+                raise Exception("LinearCode dump cannot be read, it has " +
+                                "a line with not 4 columns")
+            code, left, right, rep = le
+            num_of_lines += 1
+            code = bin(code)
+            interval = (float(left), float(right))
+            rep = float(rep)
+            self.rep_to_code[rep] = code
+            self.interval_to_rep[interval] = rep
+
+        # counting bits
+        if abs(math.trunc(math.log(num_of_lines, 2)) - 0.) > 1e-7:
+            raise Exception("LinearCode dump contains not power of 2 " +
+                            "number of lines as coded intervals")
+        self.bits = round(math.log(num_of_lines, 2))
+
+    def dump(self, ostream):
+        AbstractCode.dump(self, ostream)
+        l = [(self.rep_to_code[rep], interval, rep)
+              for interval, rep in self.interval_to_rep.iteritems()]
+        l.sort(key=lambda x: x[0])
+        max_bits = math.ceil(math.log(len(l), 2))
+        for code, interval, rep in l:
+            # length-adjusted code string
+            adjusted_code = "0b" + str(code)[2:].rjust(max_bits, "0")
+
+            ostream.write("{0}\t{1}\t{2}\t{3}\n".format(
+                adjusted_code, interval[0], interval[1], rep))
+
     
-class LogLinCode(AbstractCode):
+class LogLinCode(LinearCode):
     """ Class to realize linear quantizing on log space values"""
 
     def __init__(self, bits, neg_cutoff=-30, pos_cutoff=0):
@@ -61,8 +109,7 @@ class LogLinCode(AbstractCode):
                          but below only with epsilon is represented as the
                          previous representer
         """
-        AbstractCode.__init__(self)
-        self.bits = bits
+        LinearCode.__init__(self, bits)
         self.neg_cutoff = neg_cutoff
         self.pos_cutoff = pos_cutoff
 
@@ -98,6 +145,11 @@ class LogLinCode(AbstractCode):
                            self.bits, self.interval_len)
             return val
 
+    def read(self, istream):
+        pass
+
+    def dump(self, ostream):
+        pass
 
 def main():
     bits = int(sys.argv[1])
