@@ -75,7 +75,7 @@ def count_mdl(r_automaton, corpus, bit_no):
     #    print pair, weight
     param_no = len(weights)
     err = kl_err*word_no
-    sys.stderr.write(str(kl_err)+' ')
+    #sys.stderr.write(str(kl_err)+' ')
     bit_per_param = math.log(state_no**2)+math.log(morpheme_no)+bit_no
     mdl = (param_no*bit_per_param)+err
     return param_no, bit_per_param, param_no*bit_per_param, kl_err, err, mdl
@@ -116,7 +116,8 @@ def main_multi():
     mdls = []
     errs = []
     bits = []
-    for i in range(5, 13):
+    for i in range(1, 13):
+        sys.stderr.write('i='+str(i)+' ')
         mdls.append([])
         errs.append([])
         bits.append([])
@@ -128,11 +129,13 @@ def main_multi():
             mdls[-1].append(mdl)
             errs[-1].append(err)
             bits[-1].append(bit)
-    m = open('mdls.txt', 'w')
+    sys.stderr.write('\n')
+    fsa_name = sys.argv[1].split('/')[-1].split('.')[0]
+    m = open('stats/{0}.mdl'.format(fsa_name), 'w')
     m.write('\n'.join([' '.join([str(v) for v in line]) for line in mdls]))
-    m = open('errs.txt', 'w')
+    m = open('stats/{0}.err'.format(fsa_name), 'w')
     m.write('\n'.join([' '.join([str(v) for v in line]) for line in errs]))
-    m = open('bits.txt', 'w')
+    m = open('stats/{0}.bit'.format(fsa_name), 'w')
     m.write('\n'.join([' '.join([str(v) for v in line]) for line in bits]))
 
 if __name__=='__main__':
