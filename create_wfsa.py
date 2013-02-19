@@ -6,6 +6,7 @@ import math
 from collections import defaultdict
 from corpus import read_corpus, normalize_corpus
 from automaton import Automaton
+import logging
 
 def get_morpheme_frequencies(corpus):
     prefixes = defaultdict(int)
@@ -15,9 +16,13 @@ def get_morpheme_frequencies(corpus):
         if len(morphemes)==1:
             prefixes['O']+=freq
             suffixes[morphemes[0]]+=freq
-        if len(morphemes)>1:
+        elif len(morphemes)==2:
             prefixes[morphemes[0]]+=freq
             suffixes[morphemes[1]]+=freq
+        else:
+            logging.critical("can't have more than two morphemes \
+                              in a '3state' FSA")
+            raise Exception()
     return prefixes, suffixes
 
 def create_wfsa(fsa_creator, file_name, corp):
@@ -46,8 +51,11 @@ def move_word_to_separate_edge(prefix, suffix, fsa):
     p_suff = math.exp(fsa.m['@_0'][suffix+'_0'])
     #print 'P(suffix) =', p_suff
     fsa.m['^'][prefix+'_0'] = math.log(p_pref - p_word)
-    fsa.m['@'][suffix+'_0'] = math.log(p_suff - p_word)
-    word = prefix+suffix
+    fsa.m['@_0'][suffix+'_0'] = math.log(p_suff - p_word)
+    if prefix == 'O':
+        word = suffix
+    else:
+        word = prefix+suffix
     fsa.emissions[word+'_0'] = word
     fsa.m_emittors[word].add(word+'_0')
     fsa.m['^'][word+'_0'] = math.log(p_word)
@@ -86,4 +94,5 @@ def main():
     create_wfsa(fsa_creator, file_name, n_corpus)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     main()
