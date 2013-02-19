@@ -315,7 +315,7 @@ class Automaton(object):
     
     def round_transitions(self, edges):
         for state, weight in edges.iteritems():
-            edges[state] = self.code.quantize(weight)
+            edges[state] = self.code.representer(weight)
 
     def normalize_node(self, edges):
         #print 'before:', edges.values()
@@ -382,31 +382,3 @@ class Automaton(object):
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
     
-    #obsolete
-    @staticmethod
-    def dump_round(orig, round):
-        for weight, state in orig:
-            print state, weight, round[state]
-
-    #obsolete
-    @staticmethod
-    def my_log(x):
-        if x == 0:
-            return float('-inf')
-        else:
-            return math.log(x)
-
-    #obsolete
-    @staticmethod
-    def bit_round(x, n):
-        return round(x*((2**n)-1))/((2**n)-1)
-
-    #obsolete
-    @staticmethod
-    def round_32(weight, bit_no):
-        if weight in (0, 1): return weight
-        to_round = math.log(weight)/-32
-        rounded = Automaton.bit_round(to_round, bit_no)
-        rounded_weight = math.exp(rounded*-32)
-        return rounded_weight
-
