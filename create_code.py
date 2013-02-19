@@ -31,10 +31,3 @@ def create_code(num_of_intervals, max_value, min_value=0):
         print code, int_start, int_end, v
         code = bin(int(code, 2)+1)
         
-def main():
-    b = int(sys.argv[1])
-    c = float(sys.argv[2])
-    create_code(b, c)
-
-if __name__ == '__main__':
-    main()
