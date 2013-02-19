@@ -34,44 +34,44 @@ def main(options):
     # TODO refactor unreadable if branches
     corpus = read_corpus(sys.stdin, options.separator)
     corpus = normalize_corpus(corpus)
-
-    alphabet = get_alphabet(corpus)
-
-    initial_transitions = None
-    if options.initial_transitions:
-        initial_transitions = Automaton.read_transitions(options.initial_transitions)
-        
-    if options.emitfile:
-        numbers_per_letters = read_dict(open(options.emitfile))
-        if set(numbers_per_letters.keys()) != set(alphabet.keys()):
-            raise Exception("File in wrong format describing emitter states")
-
-        automaton = Automaton.create_uniform_automaton(
-            numbers_per_letters, initial_transitions=initial_transitions)
-    elif options.init_from_corpus:
-        automaton = Automaton.create_from_corpus(corpus)
-        #logg( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
-        automaton.smooth()
-        #logg( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
-        #automaton.dump(sys.stdout)
-        #quit()
+    if options.automaton_file:
+        automaton = Automaton.create_from_dump(options.automaton_file)
     else:
-        alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
-        #!!! manual change
-        #o_prob = initial_transitions['^']['O_0']
-        #for word in words_to_add:
-            #alphabet_numstate, initial_transitions = \
-                #add_word(word, o_prob, alphabet_numstate, initial_transitions)
-        #!!! end of manual change
+        alphabet = get_alphabet(corpus)
+        initial_transitions = None
+        if options.initial_transitions:
+            initial_transitions = Automaton.read_transitions(options.initial_transitions)        
+        if options.emitfile:
+            numbers_per_letters = read_dict(open(options.emitfile))
+            if set(numbers_per_letters.keys()) != set(alphabet.keys()):
+                raise Exception("File in wrong format describing emitter states")
 
-        if options.num_epsilons > 0:
-            # adding states for epsilon emission
-            alphabet_numstate["EPSILON"] = options.num_epsilons
-        automaton = Automaton.create_uniform_automaton(
-            alphabet_numstate, initial_transitions=initial_transitions)
-        #!temporary
-        #automaton.smooth()
-    
+            automaton = Automaton.create_uniform_automaton(
+                numbers_per_letters, initial_transitions=initial_transitions)
+        elif options.init_from_corpus:
+            automaton = Automaton.create_from_corpus(corpus)
+            #logg( "Analytical optimum of KL: %f" % distance(corpus,automaton,kullback) )
+            automaton.smooth()
+            #logg( "KL after smoothing: %f" % distance(corpus,automaton,kullback) )
+            #automaton.dump(sys.stdout)
+            #quit()
+        else:
+            alphabet_numstate = dict([(letter, options.numstate) for letter in alphabet.keys()])
+            #!!! manual change
+            #o_prob = initial_transitions['^']['O_0']
+            #for word in words_to_add:
+                #alphabet_numstate, initial_transitions = \
+                    #add_word(word, o_prob, alphabet_numstate, initial_transitions)
+            #!!! end of manual change
+
+            if options.num_epsilons > 0:
+                # adding states for epsilon emission
+                alphabet_numstate["EPSILON"] = options.num_epsilons
+            automaton = Automaton.create_uniform_automaton(
+                alphabet_numstate, initial_transitions=initial_transitions)
+            #!temporary
+            #automaton.smooth()
+        
     if options.code:
         automaton.code = Code.create_from_file(options.code)
     automaton.round_and_normalize()
@@ -124,6 +124,10 @@ def optparser():
     parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons", type="int",
                       metavar="N", default=0,
                       help="number of (non-initial and non-final) states, that doesn't emit anything") 
+    parser.add_option("-a", "--automaton-file", dest="automaton_file",
+                      metavar="FILE", type="str", default=None,
+                      help="File containing the dump of the automaton to initialize")
+
     parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
                       metavar="FILE", type="str",
                       help="File with initial transition probabilities. Each transition should be in a separate line, \
