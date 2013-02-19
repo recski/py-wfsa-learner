@@ -1,3 +1,6 @@
+"""
+This module creates individual wfsa objects
+"""
 import sys
 import math
 from collections import defaultdict

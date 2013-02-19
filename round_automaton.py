@@ -1,3 +1,6 @@
+"""
+This module reads a wfsa from a dump, encodes it using the coding specified, compares the result to a corpus and counts the coded wfsa's minimum description length
+"""
 from automaton import Automaton, Code
 from round_freqs import get_error
 from corpus import read_corpus, normalize_corpus
