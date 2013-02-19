@@ -56,7 +56,9 @@ class LinearCode(AbstractCode):
         self.interval_to_rep = {}
 
     def representer(self, number):
-        pass
+        for interval, rep in self.interval_to_rep.iteritems():
+            if number > interval[0] and number <= interval[1]:
+                return rep
 
     def read(self, istream):
         # to count bits later!
