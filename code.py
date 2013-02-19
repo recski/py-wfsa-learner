@@ -30,7 +30,15 @@ class AbstractCode(object):
 
     def code(self, representer):
         """returns a binary code representation of @representer"""
-        raise NotImplementedError()
+        if representer in self.rep_to_codes:
+            return self.rep_to_codes[representer]
+
+        # handling floating point inaccuracy
+        for known_rep in self.rep_to_codes.iterkeys():
+            if abs(known_rep - representer) < 1e-7:
+                return self.rep_to_codes[known_rep]
+
+        raise Exception("There is no code for this representer")
     
 class LogLinCode(AbstractCode):
     """ Class to realize linear quantizing on log space values"""
@@ -80,4 +88,5 @@ class LogLinCode(AbstractCode):
         else:
             val = my_round(number, self.neg_cutoff, self.pos_cutoff,
                            self.bits, self.interval_len)
+            return val
 
