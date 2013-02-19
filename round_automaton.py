@@ -4,6 +4,7 @@ This module reads a wfsa from a dump, encodes it using the coding specified, com
 from automaton import Automaton, Code
 from round_freqs import get_error
 from corpus import read_corpus, normalize_corpus
+import logging
 import math
 import sys
 
@@ -142,5 +143,6 @@ def main_multi():
     m.write('\n'.join([' '.join([str(v) for v in line]) for line in bits]))
 
 if __name__=='__main__':
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     #main_multi()
     main()
