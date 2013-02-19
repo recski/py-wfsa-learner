@@ -1,5 +1,6 @@
 
 def my_round(number, lowest, highest, bits, interval_len=None):
+    """rounding with transformation of ranges"""
     if interval_len is None:
         interval_len = (highest - lowest) / bits
 
