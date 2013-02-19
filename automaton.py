@@ -16,7 +16,7 @@ class Automaton(object):
 
     def __init__(self) :
         # the transitions
-        self.m = defaultdict(lambda: defaultdict(float))
+        self.m = defaultdict(lambda: defaultdict(lambda: float("-inf")))
 
         #self.m = defaultdict(dict)
         # emissions for the states
