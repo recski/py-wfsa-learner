@@ -1,3 +1,4 @@
+import sys
 
 def my_round(number, lowest, highest, bits, interval_len=None):
     """rounding with transformation of ranges"""
@@ -40,6 +41,12 @@ class AbstractCode(object):
                 return self.rep_to_codes[known_rep]
 
         raise Exception("There is no code for this representer")
+
+    def dump(self, ostream):
+        pass
+
+    def read(self, istream):
+        pass
     
 class LogLinCode(AbstractCode):
     """ Class to realize linear quantizing on log space values"""
@@ -91,3 +98,12 @@ class LogLinCode(AbstractCode):
                            self.bits, self.interval_len)
             return val
 
+
+def main():
+    bits = int(sys.argv[1])
+    cutoff = float(sys.argv[2])
+    llc = LogLinCode(bits, cutoff)
+    llc.dump(sys.stdout)
+
+if __name__ == '__main__':
+    main()
