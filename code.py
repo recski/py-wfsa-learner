@@ -42,11 +42,11 @@ class AbstractCode(object):
 
         raise Exception("There is no code for this representer")
     
-    def __dump_header(self, ostream):
+    def _dump_header(self, ostream):
         ostream.write("#{0}".format(self.__class__.__name__))
 
     def dump(self, ostream):
-        self.__dump_header(ostream)
+        self._dump_header(ostream)
         # after that, comes the real dump, if called
 
     @staticmethod
@@ -87,27 +87,26 @@ class LinearCode(AbstractCode):
                 raise Exception("LinearCode dump cannot be read, it has " +
                                 "a line with not 4 columns")
             code, left, right, rep = le
-            code = bin(code)
+            code = int(code, 2)
             interval = (float(left), float(right))
             rep = float(rep)
             self.rep_to_code[rep] = code
             self.interval_to_rep[interval] = rep
 
-    def __dump_header(self, ostream):
-        AbstractCode.dump_header(self, ostream)
+    def _dump_header(self, ostream):
+        AbstractCode._dump_header(self, ostream)
         ostream.write("\t{0}\n".format(self.bits))
 
     def dump(self, ostream):
         AbstractCode.dump(self, ostream)
-        # no need for other parameters in first line
-        ostream.write("\n")
+
         l = [(self.rep_to_code[rep], interval, rep)
               for interval, rep in self.interval_to_rep.iteritems()]
         l.sort(key=lambda x: x[0])
-        max_bits = math.ceil(math.log(len(l), 2))
+        max_bits = int(math.ceil(math.log(len(l), 2)))
         for code, interval, rep in l:
             # length-adjusted code string
-            adjusted_code = "0b" + str(code)[2:].rjust(max_bits, "0")
+            adjusted_code = bin(code)[2:].rjust(max_bits, "0")
 
             ostream.write("{0}\t{1}\t{2}\t{3}\n".format(
                 adjusted_code, interval[0], interval[1], rep))
@@ -131,20 +130,24 @@ class LogLinCode(LinearCode):
 
         useful_codes = 2 ** bits
 
-        self.rep_to_code[self.neg_cutoff] = bin(0)
+        self.rep_to_code[self.neg_cutoff] = 0
+        self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = self.neg_cutoff
         useful_codes -= 1
 
         if self.pos_cutoff != 0:
-            self.rep_to_code[self.pos_cutoff] = bin(2 ** bits - 1)
+            self.rep_to_code[self.pos_cutoff] = 2 ** bits - 1
+            self.interval_to_rep[(self.pos_cutoff, 0.0)] = self.pos_cutoff
             useful_codes -= 1
 
         interval_len = float(self.pos_cutoff - self.neg_cutoff) / useful_codes
         self.interval_len = interval_len
         for useful_code_i in xrange(useful_codes):
-            code = bin(useful_code_i + 1)
+            code = useful_code_i + 1
             representer = (self.neg_cutoff
                            + ((useful_code_i + 1) * interval_len
                               + useful_code_i * interval_len) / 2.0)
+            self.interval_to_rep[(representer - interval_len / 2.0,
+                representer + interval_len / 2.0)] = representer
             self.rep_to_code[representer] = code
 
     def representer(self, number):
@@ -167,9 +170,10 @@ class LogLinCode(LinearCode):
                         "header information is used from dump, intervals " +
                         "are counted from them, other lines are discarded")
 
-    def __dump_header(self, ostream):
-        AbstractCode.dump_header(self, ostream)
-        ostream.write("\t{0}\t{1}\n".format(self.neg_cutoff, self.pos_cutoff))
+    def _dump_header(self, ostream):
+        AbstractCode._dump_header(self, ostream)
+        ostream.write("\t{0}\t{1}\t{2}\n".format(
+            self.bits, self.neg_cutoff, self.pos_cutoff))
 
 def main():
     bits = int(sys.argv[1])
