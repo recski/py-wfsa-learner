@@ -60,6 +60,10 @@ class Automaton(object):
             automaton.m_emittors[s2[:-2]].add(s2)
             automaton.m[s1][s2] = Automaton.my_log(weight)
 
+        for node, edges in automaton.m.iteritems():
+            Automaton.check_node_sum(edges)
+
+        automaton.change_defaultdict_to_dict()
         return automaton
     
     @staticmethod
@@ -359,7 +363,6 @@ class Automaton(object):
         self.round_and_normalize_node(self.m[n1])
         Automaton.check_node_sum(self.m[n1])
 
-    #obsolete
     @staticmethod
     def check_node_sum(edges):
         epsilon = 1e-5
