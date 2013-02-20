@@ -55,7 +55,8 @@ class AbstractCode(object):
         it will create one of the sublasses, with calling its read()"""
         l = istream.readline().strip()
         le = l.split("\t")
-        class_name = le[0]
+
+        class_name = le[0][1:] # because it starts with '#'
         const_args = le[1:]
         if class_name == "LinearCode":
             bits = int(const_args[0])
@@ -65,6 +66,8 @@ class AbstractCode(object):
             neg_cutoff = float(const_args[1])
             pos_cutoff = float(const_args[2])
             coder = LogLinCode(bits, neg_cutoff, pos_cutoff)
+        else:
+            raise Exception("Unknown Code class in dump")
         coder.read(istream)
         return coder
 
