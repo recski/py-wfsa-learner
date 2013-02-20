@@ -1,5 +1,6 @@
 import sys
 import math
+import logging
 
 def my_round(number, lowest, highest, bits, interval_len=None):
     """rounding with transformation of ranges"""
@@ -40,15 +41,32 @@ class AbstractCode(object):
                 return self.rep_to_code[known_rep]
 
         raise Exception("There is no code for this representer")
+    
+    def __dump_header(self, ostream):
+        ostream.write("#{0}".format(self.__class__.__name__))
 
     def dump(self, ostream):
-        ostream.write("#{0}\n".format(self.__class__.__name__))
+        self.__dump_header(ostream)
         # after that, comes the real dump, if called
 
     @staticmethod
     def read(istream):
         """ reads a Code class from a file, and depending on first line,
         it will create one of the sublasses, with calling its read()"""
+        l = istream.readline().strip()
+        le = l.split("\t")
+        class_name = le[0]
+        const_args = le[1:]
+        if class_name == "LinearCode":
+            bits = int(const_args[0])
+            coder = LinearCode(bits)
+        elif class_name == "LogLinCode":
+            bits = int(const_args[0])
+            neg_cutoff = float(const_args[1])
+            pos_cutoff = float(const_args[2])
+            coder = LogLinCode(bits, neg_cutoff, pos_cutoff)
+        coder.read(istream)
+        return coder
 
 class LinearCode(AbstractCode):
     def __init__(self, bits):
@@ -61,9 +79,6 @@ class LinearCode(AbstractCode):
                 return rep
 
     def read(self, istream):
-        # to count bits later!
-        num_of_lines = 0
-
         # read intervals
         for l in istream:
             le = l.strip().split("\t")
@@ -71,21 +86,20 @@ class LinearCode(AbstractCode):
                 raise Exception("LinearCode dump cannot be read, it has " +
                                 "a line with not 4 columns")
             code, left, right, rep = le
-            num_of_lines += 1
             code = bin(code)
             interval = (float(left), float(right))
             rep = float(rep)
             self.rep_to_code[rep] = code
             self.interval_to_rep[interval] = rep
 
-        # counting bits
-        if abs(math.trunc(math.log(num_of_lines, 2)) - 0.) > 1e-7:
-            raise Exception("LinearCode dump contains not power of 2 " +
-                            "number of lines as coded intervals")
-        self.bits = round(math.log(num_of_lines, 2))
+    def __dump_header(self, ostream):
+        AbstractCode.dump_header(self, ostream)
+        ostream.write("\t{0}\n".format(self.bits))
 
     def dump(self, ostream):
         AbstractCode.dump(self, ostream)
+        # no need for other parameters in first line
+        ostream.write("\n")
         l = [(self.rep_to_code[rep], interval, rep)
               for interval, rep in self.interval_to_rep.iteritems()]
         l.sort(key=lambda x: x[0])
@@ -96,7 +110,6 @@ class LinearCode(AbstractCode):
 
             ostream.write("{0}\t{1}\t{2}\t{3}\n".format(
                 adjusted_code, interval[0], interval[1], rep))
-
     
 class LogLinCode(LinearCode):
     """ Class to realize linear quantizing on log space values"""
@@ -148,10 +161,13 @@ class LogLinCode(LinearCode):
             return val
 
     def read(self, istream):
-        pass
+        logging.warning("while using LogLinCode class for coding, only " +
+                        "header information is used from dump, intervals " +
+                        "are counted from them, other lines are discarded")
 
-    def dump(self, ostream):
-        pass
+    def __dump_header(self, ostream):
+        AbstractCode.dump_header(self, ostream)
+        ostream.write("\t{0}\t{1}\n".format(self.neg_cutoff, self.pos_cutoff))
 
 def main():
     bits = int(sys.argv[1])
