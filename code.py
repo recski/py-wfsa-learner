@@ -70,6 +70,7 @@ class AbstractCode(object):
 
 class LinearCode(AbstractCode):
     def __init__(self, bits):
+        AbstractCode.__init__(self)
         self.bits = bits
         self.interval_to_rep = {}
 
@@ -130,20 +131,21 @@ class LogLinCode(LinearCode):
 
         useful_codes = 2 ** bits
 
-        self.rep_to_codes[self.neg_cutoff] = bin(0)
+        self.rep_to_code[self.neg_cutoff] = bin(0)
         useful_codes -= 1
 
         if self.pos_cutoff != 0:
-            self.rep_to_codes[self.pos_cutoff] = bin(2 ** bits - 1)
+            self.rep_to_code[self.pos_cutoff] = bin(2 ** bits - 1)
             useful_codes -= 1
 
-        interval_len = (self.pos_cutoff - self.neg_cutoff) / useful_codes
+        interval_len = float(self.pos_cutoff - self.neg_cutoff) / useful_codes
         self.interval_len = interval_len
         for useful_code_i in xrange(useful_codes):
             code = bin(useful_code_i + 1)
-            representer = ((useful_code_i + 1) * interval_len +
-                           useful_code_i * interval_len) / 2.0
-            self.rep_to_codes[representer] = code
+            representer = (self.neg_cutoff
+                           + ((useful_code_i + 1) * interval_len
+                              + useful_code_i * interval_len) / 2.0)
+            self.rep_to_code[representer] = code
 
     def representer(self, number):
         """ Because this is a linear coder, easy to locate representers,
