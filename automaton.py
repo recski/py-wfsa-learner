@@ -1,9 +1,8 @@
-# TODO use log prob 
-# 
 import sys
 import math
 from collections import defaultdict
 import logging
+from optparse import OptionParser
 
 from misc import closure_and_top_sort
 
@@ -378,3 +377,58 @@ class Automaton(object):
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
     
+def optparser():
+    parser = OptionParser()
+    parser.add_option("-n", "--num_of_states",dest="numstate", type="int",
+                      default=1, metavar="N",
+                      help="number of states per letter of alphabet")
+
+    # TODO is this used?
+    parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
+                      help="filename of file having (letter,number) pairs",
+                      metavar="FILENAME")
+
+    parser.add_option("-s", "--separator",dest="separator", type="str",
+                      help="separator of letters in string (allows using " + 
+                      " complex letters, ie. labels)", metavar="SEPARATOR",
+                      default="")
+
+    parser.add_option("-c", "--from-corpus", dest="init_from_corpus",
+                      action="store_true", default=False,
+                      help="initialize the automaton from corpus " + 
+                      "frequencies with smoothing")
+
+    # TODO is this needed only in learner?
+    parser.add_option("-o", "--code", dest="code", type="str", default=None,
+                      metavar="FILE",
+                      help="store parameters using a code specified in FILE")
+
+    parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
+                      type="int", metavar="N", default=0, help="number of " +
+                      "(non-initial and non-final) states, that doesn't " + 
+                      "emit anything") 
+
+    parser.add_option("-a", "--automaton-file", dest="automaton_file",
+                      metavar="FILE", type="str", default=None,
+                      help="File containing the dump of the automaton to initialize")
+
+    parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
+                      metavar="FILE", type="str", help="File with initial " + 
+                      "transition probabilities. Each transition should be " + 
+                      "in a separate line, source state, target state and " + 
+                      "probability are separated by space. Transitions that " + 
+                      "are not given share the remaining probability mass " + 
+                      "equally.")
+
+
+    (options, args) = parser.parse_args()
+
+    return options
+
+def main(options):
+    pass
+
+if __name__ == "__main__":
+    options = optparser()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+    main(options)
