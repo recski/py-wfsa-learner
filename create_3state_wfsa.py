@@ -88,9 +88,17 @@ def main():
     corpus = read_corpus(sys.stdin)
     n_corpus = normalize_corpus(corpus)
     file_name = sys.argv[1]
-    #fsa_creator = lambda corpus: create_three_state_fsa(corpus)
-    #fsa_creator = lambda corpus: create_hogy_fsa(corpus)
-    fsa_creator = lambda corpus: create_o_fsa(corpus)
+    fsa_type = sys.argv[2]
+    if fsa_type == 'plain':
+        fsa_creator = lambda corpus: create_three_state_fsa(corpus)
+    elif fsa_type == 'hogy':
+        fsa_creator = lambda corpus: create_hogy_fsa(corpus)
+    elif fsa_type == 'o':
+        fsa_creator = lambda corpus: create_o_fsa(corpus)
+    else:
+        logging.critical('unknown fsa type: {0}'.format(fsa_type))
+        sys.exit(-1)
+    
     create_wfsa(fsa_creator, file_name, n_corpus)
 
 if __name__ == '__main__':
