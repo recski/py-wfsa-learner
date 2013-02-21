@@ -12,11 +12,13 @@ class Automaton(object):
     @m: transitions per states
     @emissions: emission per states
     @m_emittors: states per emitted letter"""
+    eps = 1e-7
+    m_inf = float("-inf")
 
 
     def __init__(self) :
         # the transitions
-        self.m = defaultdict(lambda: defaultdict(lambda: float("-inf")))
+        self.m = defaultdict(lambda: defaultdict(lambda: Automaton.m_inf))
 
         #self.m = defaultdict(dict)
         # emissions for the states
@@ -125,7 +127,7 @@ class Automaton(object):
                     try:                      
                         automaton.m[s1][s2] = math.log(prob)
                     except ValueError:
-                        automaton.m[s1][s2] = float("-inf")
+                        automaton.m[s1][s2] = Automaton.m_inf
                     init_total += prob
                     states_initialized.add(s2)
                     if init_total > 1.0000001:
@@ -148,7 +150,7 @@ class Automaton(object):
                 try:
                     automaton.m[s1][s2] = math.log(u)
                 except ValueError:
-                    automaton.m[s1][s2] = float("-inf")
+                    automaton.m[s1][s2] = Automaton.m_inf
                 
         return automaton
                 
@@ -223,14 +225,14 @@ class Automaton(object):
 
         head = string[:-1]
         tail = string[-1]
-        total = float("-inf")
+        total = Automaton.m_inf
         # compute real emissions
         for previousState in self.emittors(tail):
             soFar = memo[head][previousState]
             try:
                 soFar += self.m[previousState][state]
             except KeyError:
-                soFar = float("-inf")
+                soFar = Automaton.m_inf
             total = max(soFar, total)
             #total = math.log(math.exp(soFar) + math.exp(total))
 
@@ -302,14 +304,10 @@ class Automaton(object):
             if prob>0 :
                 modeledProb = math.exp(probs[item])
                 if modeledProb==0.0 :
-                    #print item, probs[item]
                     modeledProb = 1e-50
                     #raise Exception("nem kene ezt kezelni?")
                     #egyelore nem
-                #print prob, modeledProb
-                #quit()
                 distance += distfp(prob, modeledProb)
-                #print distance
         return distance
 
     def round_and_normalize_node(self, edges):
@@ -322,12 +320,9 @@ class Automaton(object):
             edges[state] = self.code.representer(weight)
 
     def normalize_node(self, edges):
-        #print 'before:', edges.values()
         total_log = math.log(sum(math.exp(v) for v in edges.values()))
         for n2 in edges.keys():
             edges[n2] -= total_log
-        #print 'after:', edges.values()
-        #print
     
     def round_and_normalize(self):
         for state, edges in self.m.iteritems():
@@ -338,9 +333,9 @@ class Automaton(object):
         for state, edges in self.m.iteritems():
             total_log = math.log(sum(math.exp(v) for v in edges.values()))
             added = 0
-            eps = 1E-4
+            eps = Automaton.eps
             for other_state in edges:
-                old_val = math.exp(edges.get(other_state, float("-inf")))
+                old_val = math.exp(edges.get(other_state, Automaton.m_inf))
                 if old_val < eps:
                     edges[other_state] = math.log(eps)
                     added += eps - old_val
@@ -365,17 +360,15 @@ class Automaton(object):
 
     @staticmethod
     def check_node_sum(edges):
-        epsilon = 1e-5
+        eps = Automaton.eps
         n_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
-        if n_sum < 1+epsilon and n_sum > 1-epsilon:
+        if n_sum < 1+eps and n_sum > 1-eps:
             return
-        for state, weight in edges.iteritems():
-            print state, math.exp(weight)
-        logging.info("abort: transitions from state don't sum to 1, but {0}".format(n_sum))
-        sys.exit(-1)
+        else:
+            raise Exception("transitions from state don't sum to 1, " +
+                          "but {0}".format(n_sum))
 
     def dump(self, f):
-        #raise Exception("Not implemented")
         nodes = sorted(self.m.keys())
         for n1 in nodes:
             for n2 in nodes + ['$']:
