@@ -2,6 +2,7 @@ import logging
 import math
 import random
 import sys
+from optparse import OptionParser
 
 from automaton import Automaton
 
@@ -131,3 +132,46 @@ class Learner(object):
                                  change_back, option_randomizer)
         self.automaton.dump(sys.stdout)
 
+def optparser():
+    parser = OptionParser()
+    parser.add_option("-f", "--factor", dest="factor", help="change factor " +
+                      "[default=%default]", default=0.97, type="float",
+                     metavar="FACTOR")
+    parser.add_option("-t", "--tempq", dest="tempq", default=0.9, type="float",
+                      help="temperature quotient [default=%default]",
+                      metavar="TEMPQ")
+    parser.add_option("", "--start_temp",dest="start_temp", default=1e-5,
+                      type="float", help="start temperature " + 
+                      "[default=%default]", metavar="TEMP")
+    parser.add_option("", "--end_temp", dest="end_temp", default=1e-7,
+                      type="float", help="end temperature " + 
+                      "[default=%default]", metavar="TEMP")
+    parser.add_option("-i", "--iter",dest="iter", type="int", default=500,
+                      help="number of iterations per temperature " +
+                      "[default=%default]", metavar="I")
+    parser.add_option("-d", "--distance", dest="distfp", type="choice",
+                      metavar="I", help="distance method",
+                      choices=["kullback", "l1err", "squarerr"])
+    parser.add_option("-o", "--code", dest="code", type="str", default=None,
+                      metavar="FILE",
+                      help="store parameters using a code specified in FILE")
+    parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
+                      metavar="PROBABILITY", default=0.0, type="float",
+                      help="in random parameter selection prefer the one " +
+                      "which improved the result in the previous iteration " +
+                      "with PROBABILITY [default=%default]")
+    parser.add_option("-a", "--automaton-file", dest="automaton_file",
+                      metavar="FILE", type="str", default=None,
+                      help="File containing the dump of the input automaton")
+
+    (options, args) = parser.parse_args()
+
+    return options
+
+def main(options):
+    pass
+
+if __name__ == "__main__":
+    options = optparser()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+    main(options)
