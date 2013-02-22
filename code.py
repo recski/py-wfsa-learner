@@ -1,6 +1,7 @@
 import sys
 import math
 import logging
+from optparse import OptionParser
 
 def my_round(number, lowest, highest, bits, interval_len=None):
     """rounding with transformation of ranges"""
@@ -76,6 +77,29 @@ class LinearCode(AbstractCode):
         AbstractCode.__init__(self)
         self.bits = bits
         self.interval_to_rep = {}
+
+    @staticmethod
+    def create(bits, neg, pos):
+        lc = LinearCode(bits)
+
+        # keep to codes for -inf and +inf
+        int_len = (pos - neg) / (2 ** bits - 2)
+        
+        # left most interval
+        lc.interval_to_rep[(float("-inf"), neg)] = neg - int_len / 2.0
+        lc.rep_to_code[neg - int_len / 2.0] = 0
+
+        # right most interval
+        lc.interval_to_rep[(pos, float("inf"))] = pos + int_len / 2.0
+        lc.rep_to_code[pos + int_len / 2.0] = 2 ** bits - 1
+
+        for code_i in xrange(1, 2 ** bits - 1):
+            interval = (neg + (code_i - 1) * int_len, neg + (code_i) * int_len)
+            rep = (interval[1] + interval[0]) / 2.0
+            lc.interval_to_rep[interval] = rep
+            lc.rep_to_code[rep] = code_i
+
+        return lc
 
     def representer(self, number):
         for interval, rep in self.interval_to_rep.iteritems():
@@ -178,11 +202,50 @@ class LogLinCode(LinearCode):
         ostream.write("\t{0}\t{1}\t{2}\n".format(
             self.bits, self.neg_cutoff, self.pos_cutoff))
 
+def optparser():
+    parser = OptionParser()
+    parser.add_option("-t", "--type", dest="typ", type="choice",
+                      choices=["linear", "loglinear_cutoff"],
+                      help="what kind of quantizer/coder to create. " + 
+                      "Choices are: linear an loglinear with cutoff")
+
+    parser.add_option("-b", "--bits", dest="bits", type="int", default=8,
+                      help="how many bits to use. [default=%default]")
+
+    parser.add_option("", "--min", dest="low", type="float", default=-30.,
+                      help="lowest value to encode when using linear coder," +
+                     "negative cutoff when using loglinear")
+
+    parser.add_option("", "--max", dest="high", type="float", default=0.,
+                      help="highest value to encode when using linear coder," +
+                     "positive cutoff when using loglinear")
+
+    parser.add_option("-o", "--output", dest="output", metavar="FILE",
+                      type="str", default=None, help="File containing the " +
+                      "dump of the coder object [default=stdout]")
+
+    (options, args) = parser.parse_args()
+    return options
+
+def create_coder(options):
+    if not options.typ:
+        raise Exception("coder type is mandatory")
+
+    output = (open(options.output, "w") if options.output else sys.stdout)
+
+    if options.typ == "linear":
+        lc = LinearCode.create(options.bits, options.low, options.high)
+        lc.dump(output)
+        return
+    elif options.typ == "loglinear_cutoff":
+        llc = LogLinCode(options.bits, options.low, options.high)
+        llc.dump(output)
+        return
+
+
 def main():
-    bits = int(sys.argv[1])
-    cutoff = float(sys.argv[2])
-    llc = LogLinCode(bits, cutoff)
-    llc.dump(sys.stdout)
+    options = optparser()
+    create_coder(options)
 
 if __name__ == '__main__':
     main()
