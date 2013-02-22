@@ -14,9 +14,10 @@ __FIELD_RANGE = (1, 2)
 
 def read_corpus(stream, separator=None, silent=False):
     """
-    Reads the corpus from @p stream and returns it. The corpus is a
+    Reads the corpus from stream and returns it. The corpus is a
     {word: frequency} (???) map.
-    @param separator the key separator (?)
+    @param stream input
+    @param separator the letter separator
     @param silent if @c True, invalid lines are silently dropped; otherwise,
                   a CorpusException is thrown.
     """
