@@ -5,6 +5,7 @@ import logging
 from optparse import OptionParser
 
 from misc import closure_and_top_sort
+from corpus import read_dict
 
 class Automaton(object):
     """ Classic Moore-automaton class with
@@ -108,7 +109,12 @@ class Automaton(object):
         if initial_transitions:
             for s in initial_transitions.keys():
                 if s not in states:
-                    raise Exception("invalid state name in init: %s" % s)
+                    raise Exception("invalid state name in initial " +
+                                   "transitions given by option -I")
+                for s2 in initial_transitions[s]:
+                    if s2 not in states:
+                        raise Exception("invalid state name in initial " +
+                                       "transitions given by option -I")
 
         # calculate uniform transition distributions
         for s1 in states:
@@ -154,7 +160,7 @@ class Automaton(object):
         return automaton
                 
     @staticmethod
-    def create_from_corpus(corpus) :
+    def create_from_corpus(corpus):
         """ Creates an automaton from a corpus, where @corpus is a dict from
         items (str or tuple) to counts
         """
@@ -381,12 +387,15 @@ def optparser():
     parser = OptionParser()
     parser.add_option("-n", "--num_of_states",dest="numstate", type="int",
                       default=1, metavar="N",
-                      help="number of states per letter of alphabet")
+                      help="number of states per letter of alphabet " + 
+                     "[default=%default]")
 
     # TODO is this used?
     parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
-                      help="filename of file having (letter,number) pairs",
-                      metavar="FILENAME")
+                      help="file having (letter,number) pairs, from which " +
+                      "a uniform automaton is created. EPSILON can be a " +
+                      "letter. Option -I can be used to override some " +
+                      "transitions.", metavar="FILENAME")
 
     parser.add_option("-s", "--separator",dest="separator", type="str",
                       help="separator of letters in string (allows using " + 
@@ -398,19 +407,14 @@ def optparser():
                       help="initialize the automaton from corpus " + 
                       "frequencies with smoothing")
 
-    # TODO is this needed only in learner?
-    parser.add_option("-o", "--code", dest="code", type="str", default=None,
-                      metavar="FILE",
-                      help="store parameters using a code specified in FILE")
-
     parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
                       type="int", metavar="N", default=0, help="number of " +
                       "(non-initial and non-final) states, that doesn't " + 
-                      "emit anything") 
+                      "emit anything [default=%default]") 
 
-    parser.add_option("-a", "--automaton-file", dest="automaton_file",
-                      metavar="FILE", type="str", default=None,
-                      help="File containing the dump of the automaton to initialize")
+    parser.add_option("-o", "--output", dest="output", metavar="FILE",
+                      type="str", default=None, help="File containing the " +
+                      "dump of the automaton to initialize [default=stdout]")
 
     parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
                       metavar="FILE", type="str", help="File with initial " + 
@@ -420,13 +424,27 @@ def optparser():
                       "are not given share the remaining probability mass " + 
                       "equally.")
 
-
     (options, args) = parser.parse_args()
-
     return options
 
+def create_wfsa(options):
+    # open output file or write to stdout
+    output = (open(options.output, "w") if options.output else sys.stdout)
+
+    # read initial transitions if given
+    it = options.initial_transitions
+    initial_transitions = (Automaton.read_transitions(it) if it else None)
+
+    # create uniform automaton with given number of states per letter
+    # and the possibility of predefine some transitions
+    if options.emitfile:
+        numbers_per_letters = read_dict(open(options.emitfile))
+        automaton = Automaton.create_uniform_automaton(
+            numbers_per_letters, initial_transitions=initial_transitions)
+        automaton.dump(output)
+
 def main(options):
-    pass
+    create_wfsa(options)
 
 if __name__ == "__main__":
     options = optparser()
