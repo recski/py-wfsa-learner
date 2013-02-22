@@ -441,7 +441,7 @@ def create_wfsa(options):
 
     # read initial transitions if given
     it = options.initial_transitions
-    initial_transitions = (Automaton.read_transitions(it) if it else None)
+    initial_transitions = (Automaton.read_transitions(it) if it else {})
 
     # create uniform automaton with given number of states per letter
     # and the possibility of predefine some transitions
@@ -453,6 +453,9 @@ def create_wfsa(options):
         return
 
     if options.init_from_corpus:
+        if len(initial_transitions) > 0:
+            raise Exception("Using initial transitions (-I option) when " +
+                           "creating automaton from corpus is not implemented")
         input_ = open(options.init_from_corpus)
         corpus = read_corpus(input_, options.separator)
         corpus = normalize_corpus(corpus)
