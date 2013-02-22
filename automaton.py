@@ -392,37 +392,12 @@ class Automaton(object):
     
 def optparser():
     parser = OptionParser()
-    parser.add_option("-n", "--num_of_states",dest="numstate", type="int",
-                      default=1, metavar="N",
-                      help="number of states per letter of alphabet " + 
-                     "[default=%default]")
-
     parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
                       help="file having (letter,number) pairs, from which " +
                       "a uniform automaton is created. EPSILON can be a " +
                       "letter. Option -I can be used to override some " +
                       "transitions. See tst/emitfile.sample",
                       metavar="FILENAME")
-
-    parser.add_option("-s", "--separator",dest="separator", type="str",
-                      help="separator of letters in corpus (allows using " + 
-                      " complex letters, ie. labels)", metavar="SEPARATOR",
-                      default="")
-
-    parser.add_option("-c", "--from-corpus", dest="init_from_corpus",
-                      default=None, type="str", help="initialize the " +
-                      "automaton from corpus frequencies with smoothing. " +
-                      "Can be used together with option -s. " +
-                      "See tst/corpus.sample", metavar="FILENAME")
-
-    parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
-                      type="int", metavar="N", default=0, help="number of " +
-                      "(non-initial and non-final) states, that doesn't " + 
-                      "emit anything [default=%default]") 
-
-    parser.add_option("-o", "--output", dest="output", metavar="FILE",
-                      type="str", default=None, help="File containing the " +
-                      "dump of the automaton to initialize [default=stdout]")
 
     parser.add_option("-I", "--initial-transitions", dest="initial_transitions",
                       metavar="FILE", type="str", help="File with initial " + 
@@ -431,6 +406,32 @@ def optparser():
                       "probability are separated by space. Transitions that " + 
                       "are not given share the remaining probability mass " + 
                       "equally. See tst/init_trans.sample")
+
+    parser.add_option("-c", "--from-corpus", dest="init_from_corpus",
+                      default=None, type="str", help="initialize the " +
+                      "automaton from corpus frequencies with smoothing. " +
+                      "Can be used together with option -s. " +
+                      "See tst/corpus.sample", metavar="FILENAME")
+
+    parser.add_option("-s", "--separator",dest="separator", type="str",
+                      help="separator of letters in corpus (allows using " + 
+                      " complex letters, ie. labels)", metavar="SEPARATOR",
+                      default="")
+
+    parser.add_option("-o", "--output", dest="output", metavar="FILE",
+                      type="str", default=None, help="File containing the " +
+                      "dump of the automaton to initialize [default=stdout]")
+
+    # TODO still not clear whether the following two options are needed
+    parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
+                      type="int", metavar="N", default=0, help="number of " +
+                      "(non-initial and non-final) states, that doesn't " + 
+                      "emit anything [default=%default]") 
+
+    parser.add_option("-n", "--num_of_states",dest="numstate", type="int",
+                      default=1, metavar="N",
+                      help="number of states per letter of alphabet " + 
+                     "[default=%default]")
 
     (options, args) = parser.parse_args()
     return options
