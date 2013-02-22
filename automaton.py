@@ -5,7 +5,7 @@ import logging
 from optparse import OptionParser
 
 from misc import closure_and_top_sort
-from corpus import read_dict
+from corpus import read_dict, read_corpus, normalize_corpus
 
 class Automaton(object):
     """ Classic Moore-automaton class with
@@ -62,10 +62,10 @@ class Automaton(object):
             automaton.m_emittors[s2[:-2]].add(s2)
             automaton.m[s1][s2] = Automaton.my_log(weight)
 
-        for node, edges in automaton.m.iteritems():
-            Automaton.check_node_sum(edges)
+        for node in automaton.m.iterkeys():
+            automaton.check_node_sum(node)
 
-        automaton.change_defaultdict_to_dict()
+        automaton.finalize()
         return automaton
     
     @staticmethod
@@ -135,6 +135,7 @@ class Automaton(object):
                         automaton.m[s1][s2] = Automaton.m_inf
                     init_total += prob
                     states_initialized.add(s2)
+                    # TODO refactor this
                     if init_total > 1.0000001:
                         sys.stderr.write("state: {0}, init total: {1}\n".format(s1, init_total))
                         raise Exception("Too much probability for init_total")
@@ -157,6 +158,7 @@ class Automaton(object):
                 except ValueError:
                     automaton.m[s1][s2] = Automaton.m_inf
                 
+        automaton.finalize()
         return automaton
                 
     @staticmethod
@@ -171,21 +173,25 @@ class Automaton(object):
             if type(item) == str:
                 item = '^' + item + '$'
             else:
-                # items are tuples
+                # items are tuples e.g. letter are multichar strs
                 item = ('^',) + item + ('$',)
-            for i in range(len(item)-1) :
+            for i in range(len(item) - 1) :
                 alphabet.add(item[i])
                 alphabet.add(item[i+1])
-                automaton.m[item[i]][item[i+1]] += cnt / total
-        for item1 in automaton.m.iterkeys():
-            for item2 in automaton.m[item1].iterkeys():
-                automaton.m[item1][item2] = math.log(automaton.m[item1][item2])
-        for n1, value in automaton.m.iteritems():
-            #TODO ezt ugye ki lehet venni?
-            automaton.normalize_node(value)
+                if item[i+1] in automaton.m[item[i]]:
+                    automaton.m[item[i]][item[i+1]] += cnt / total
+                else:
+                    automaton.m[item[i]][item[i+1]] = cnt / total
+        for node1, outs in automaton.m.iteritems():
+            for node2 in outs.iterkeys():
+                outs[node2] = math.log(outs[node2])
+            automaton.normalize_node(node1)
+
         for l in alphabet:
             automaton.emissions[l] = l
             automaton.m_emittors[l].add(l)
+
+        automaton.finalize()
         return automaton
 
     @staticmethod
@@ -208,7 +214,7 @@ class Automaton(object):
     def nonemitting(state) :
         return state=="^" or state=="$" or Automaton.is_epsilon_state(state)
 
-    def change_defaultdict_to_dict(self):
+    def finalize(self):
         for state1, transitions in self.m.iteritems():
             self.m[state1] = dict(transitions)
         self.m = dict(self.m)
@@ -315,23 +321,24 @@ class Automaton(object):
                 distance += distfp(prob, modeledProb)
         return distance
 
-    def round_and_normalize_node(self, edges):
+    def round_and_normalize_node(self, node):
         if self.code:
-            self.round_transitions(edges) 
-        self.normalize_node(edges)
+            self.round_transitions(self.m[node]) 
+        self.normalize_node(node)
     
     def round_transitions(self, edges):
         for state, weight in edges.iteritems():
             edges[state] = self.code.representer(weight)
 
-    def normalize_node(self, edges):
+    def normalize_node(self, node):
+        edges = self.m[node]
         total_log = math.log(sum(math.exp(v) for v in edges.values()))
         for n2 in edges.keys():
             edges[n2] -= total_log
     
     def round_and_normalize(self):
-        for state, edges in self.m.iteritems():
-            self.round_and_normalize_node(edges)
+        for state in self.m.iterkeys():
+            self.round_and_normalize_node(state)
 
     def smooth(self):
         """Smooth zero transition probabilities"""
@@ -360,14 +367,14 @@ class Automaton(object):
         """Multiplies the transition probability between n1 and n2 by factor"""
         n1, n2 = edge
         self.m[n1][n2] += math.log(factor)
-        self.round_and_normalize_node(self.m[n1])
-        Automaton.check_node_sum(self.m[n1])
+        self.round_and_normalize_node(n1)
+        self.check_node_sum(n1)
 
-    @staticmethod
-    def check_node_sum(edges):
+    def check_node_sum(self, node):
+        edges = self.m[node]
         eps = Automaton.eps
         n_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
-        if n_sum < 1+eps and n_sum > 1-eps:
+        if n_sum < 1 + eps and n_sum > 1 - eps:
             return
         else:
             raise Exception("transitions from state don't sum to 1, " +
@@ -390,22 +397,23 @@ def optparser():
                       help="number of states per letter of alphabet " + 
                      "[default=%default]")
 
-    # TODO is this used?
     parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
                       help="file having (letter,number) pairs, from which " +
                       "a uniform automaton is created. EPSILON can be a " +
                       "letter. Option -I can be used to override some " +
-                      "transitions.", metavar="FILENAME")
+                      "transitions. See tst/emitfile.sample",
+                      metavar="FILENAME")
 
     parser.add_option("-s", "--separator",dest="separator", type="str",
-                      help="separator of letters in string (allows using " + 
+                      help="separator of letters in corpus (allows using " + 
                       " complex letters, ie. labels)", metavar="SEPARATOR",
                       default="")
 
     parser.add_option("-c", "--from-corpus", dest="init_from_corpus",
-                      action="store_true", default=False,
-                      help="initialize the automaton from corpus " + 
-                      "frequencies with smoothing")
+                      default=None, type="str", help="initialize the " +
+                      "automaton from corpus frequencies with smoothing. " +
+                      "Can be used together with option -s. " +
+                      "See tst/corpus.sample", metavar="FILENAME")
 
     parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
                       type="int", metavar="N", default=0, help="number of " +
@@ -442,6 +450,16 @@ def create_wfsa(options):
         automaton = Automaton.create_uniform_automaton(
             numbers_per_letters, initial_transitions=initial_transitions)
         automaton.dump(output)
+        return
+
+    if options.init_from_corpus:
+        input_ = open(options.init_from_corpus)
+        corpus = read_corpus(input_, options.separator)
+        corpus = normalize_corpus(corpus)
+        automaton = Automaton.create_from_corpus(corpus)
+        automaton.smooth()
+        automaton.dump(output)
+        return
 
 def main(options):
     create_wfsa(options)
