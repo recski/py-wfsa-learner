@@ -430,7 +430,7 @@ def optparser():
                       "in a separate line, source state, target state and " + 
                       "probability are separated by space. Transitions that " + 
                       "are not given share the remaining probability mass " + 
-                      "equally.")
+                      "equally. See tst/init_trans.sample")
 
     (options, args) = parser.parse_args()
     return options
