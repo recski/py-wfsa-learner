@@ -2,7 +2,6 @@
 This module reads a wfsa from a dump, encodes it using the coding specified, compares the result to a corpus and counts the coded wfsa's minimum description length
 """
 from automaton import Automaton, Code
-from round_freqs import get_error
 from corpus import read_corpus, normalize_corpus
 import logging
 import math
@@ -35,17 +34,6 @@ def count_mdl(r_automaton, corpus, bit_no):
     bit_per_param = math.log(state_no**2)+math.log(morpheme_no)+bit_no
     mdl = (param_no*bit_per_param)+err
     return param_no, bit_per_param, param_no*bit_per_param, kl_err, err, mdl
-
-def count_error(automaton, r_automaton, file_name, bit_no):
-    a_weights = get_weights(automaton)
-    r_a_weights = get_weights(r_automaton)
-    #for p, w in a_weights.iteritems():
-    #    print p, w, r_a_weights[p]
-    print file_name, bit_no,
-    for metric_name in ['l1err', 'squarerr', 'kullback']:
-        error = get_error(a_weights, r_a_weights, metric_name)
-        print metric_name, error,
-    print
 
 def main():
     corpus = read_corpus(sys.stdin, '#')
