@@ -5,6 +5,8 @@ import sys
 from optparse import OptionParser
 
 from automaton import Automaton
+from code import AbstractCode
+from corpus import read_corpus, normalize_corpus
 
 class Learner(object):
     def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
@@ -152,24 +154,49 @@ def optparser():
     parser.add_option("-d", "--distance", dest="distfp", type="choice",
                       metavar="I", help="distance method",
                       choices=["kullback", "l1err", "squarerr"])
-    parser.add_option("-o", "--code", dest="code", type="str", default=None,
-                      metavar="FILE",
-                      help="store parameters using a code specified in FILE")
     parser.add_option("-D", "--downhill-factor", dest="downhill_factor",
                       metavar="PROBABILITY", default=0.0, type="float",
                       help="in random parameter selection prefer the one " +
                       "which improved the result in the previous iteration " +
                       "with PROBABILITY [default=%default]")
+
     parser.add_option("-a", "--automaton-file", dest="automaton_file",
                       metavar="FILE", type="str", default=None,
                       help="File containing the dump of the input automaton")
+    parser.add_option("-o", "--code", dest="code", type="str", default=None,
+                      metavar="FILE",
+                      help="store parameters using a code specified in FILE")
+    parser.add_option("-c", "--corpus", dest="corpus",
+                      default=None, type="str", help="optimize automaton " +
+                      "on given corpus. Can be used together with -s. " + 
+                      "[default=stdin]. See tst/corpus.sample",
+                      metavar="FILENAME")
+    parser.add_option("-s", "--separator",dest="separator", type="str",
+                      help="separator of letters in corpus (allows using " + 
+                      " complex letters, ie. labels)", metavar="SEPARATOR",
+                      default="")
 
     (options, args) = parser.parse_args()
 
     return options
 
 def main(options):
-    pass
+    if not options.automaton_file:
+        raise Exception("Automaton \"option\" (-a) is mandatory")
+    automaton = Automaton.create_from_dump(options.automaton_file)
+
+    if options.code:
+        automaton.code = AbstractCode.read(open(options.code))
+        automaton.round_and_normalize()
+
+    input_ = sys.stdin
+    if options.corpus:
+        input_ = open(options.corpus)
+    corpus = read_corpus(input_, options.separator)
+    corpus = normalize_corpus(corpus)
+
+    learner = Learner.create_from_options(automaton, corpus, options)
+    learner.main()
 
 if __name__ == "__main__":
     options = optparser()
