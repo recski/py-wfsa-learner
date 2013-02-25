@@ -58,14 +58,14 @@ class AbstractCode(object):
         le = l.split("\t")
 
         class_name = le[0][1:] # because it starts with '#'
-        const_args = le[1:]
+        constr_args = le[1:]
         if class_name == "LinearCode":
-            bits = int(const_args[0])
+            bits = int(constr_args[0])
             coder = LinearCode(bits)
         elif class_name == "LogLinCode":
-            bits = int(const_args[0])
-            neg_cutoff = float(const_args[1])
-            pos_cutoff = float(const_args[2])
+            bits = int(constr_args[0])
+            neg_cutoff = float(constr_args[1])
+            pos_cutoff = float(constr_args[2])
             coder = LogLinCode(bits, neg_cutoff, pos_cutoff)
         else:
             raise Exception("Unknown Code class in dump")
