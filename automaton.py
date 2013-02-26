@@ -5,7 +5,7 @@ import logging
 from optparse import OptionParser
 
 from misc import closure_and_top_sort
-from corpus import read_dict, read_corpus, normalize_corpus
+from corpus import read_dict, read_corpus, normalize_corpus, get_alphabet
 
 class Automaton(object):
     """ Classic Moore-automaton class with
@@ -60,7 +60,8 @@ class Automaton(object):
             automaton.m_emittors[s1[:-2]].add(s1)
             automaton.emissions[s2] = s2[:-2]
             automaton.m_emittors[s2[:-2]].add(s2)
-            automaton.m[s1][s2] = Automaton.my_log(weight)
+            if weight > 0.0:
+                automaton.m[s1][s2] = math.log(weight)
 
         for node in automaton.m.iterkeys():
             automaton.check_node_sum(node)
@@ -80,7 +81,7 @@ class Automaton(object):
         is_degenerate = True
         for letter in alphabet:
             for index in xrange(alphabet[letter]):
-                state = letter + "_" + str(index)
+                state = "".join(letter) + "_" + str(index)
                 automaton.emissions[state] = letter
                 automaton.m_emittors[letter].add(state)
                 if is_degenerate and not Automaton.is_epsilon_state(state):
@@ -453,6 +454,20 @@ def create_wfsa(options):
         automaton.dump(output)
         return
 
+    if options.numstate:
+        input_ = open(options.init_from_corpus)
+        corpus = read_corpus(input_, options.separator)
+        alphabet = get_alphabet(corpus)
+        numbers_per_letters = dict([(letter, options.numstate)
+                              for letter in alphabet])
+        if options.num_epsilons:
+            numbers_per_letters["EPSILON"] = options.num_epsilons
+
+        automaton = Automaton.create_uniform_automaton(
+            numbers_per_letters, initial_transitions)
+        automaton.dump(output)
+        return
+
     if options.init_from_corpus:
         if len(initial_transitions) > 0:
             raise Exception("Using initial transitions (-I option) when " +
@@ -464,6 +479,12 @@ def create_wfsa(options):
         automaton.smooth()
         automaton.dump(output)
         return
+
+
+    # fallback
+    logging.error("Options are not complete, something is missing to create " +
+                  "an Automaton")
+    sys.exit(-1)
 
 def main(options):
     create_wfsa(options)
