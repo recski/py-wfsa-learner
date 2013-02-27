@@ -7,6 +7,7 @@ from optparse import OptionParser
 from automaton import Automaton
 from code import AbstractCode
 from corpus import read_corpus, normalize_corpus
+from mdl import mdl
 
 class Learner(object):
     def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
@@ -132,7 +133,9 @@ class Learner(object):
         option_randomizer = lambda: self.randomize_automaton_change()
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
-        self.automaton.dump(sys.stdout)
+        mdl_ = mdl(self.automaton, self.corpus, self.code.bits, self.distfp,
+                   n_state=0, n_alphabet=0, n_word=0)
+        logging.info("Learning is finished. MDL is {0}".format(mdl_))
 
 def optparser():
     parser = OptionParser()
@@ -159,11 +162,15 @@ def optparser():
                       help="in random parameter selection prefer the one " +
                       "which improved the result in the previous iteration " +
                       "with PROBABILITY [default=%default]")
+    parser.add_option("-o", "--output", dest="output", metavar="FILE",
+                      type="str", default=None, help="File containing the " +
+                      "dump of the learnt automaton [default=stdout]")
+
 
     parser.add_option("-a", "--automaton-file", dest="automaton_file",
                       metavar="FILE", type="str", default=None,
                       help="File containing the dump of the input automaton")
-    parser.add_option("-o", "--code", dest="code", type="str", default=None,
+    parser.add_option("-q", "--code", dest="code", type="str", default=None,
                       metavar="FILE",
                       help="store parameters using a code specified in FILE")
     parser.add_option("-c", "--corpus", dest="corpus",
@@ -197,6 +204,11 @@ def main(options):
 
     learner = Learner.create_from_options(automaton, corpus, options)
     learner.main()
+
+    output = sys.stdout
+    if options.output:
+        output = options.output
+        learner.automaton.dump(output)
 
 if __name__ == "__main__":
     options = optparser()
