@@ -1,7 +1,5 @@
 """Contains corpus-related stuff."""
 
-# TODO: docstrings to functions
-
 from collections import defaultdict
 
 class CorpusError(Exception):

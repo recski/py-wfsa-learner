@@ -423,7 +423,6 @@ def optparser():
                       type="str", default=None, help="File containing the " +
                       "dump of the automaton to initialize [default=stdout]")
 
-    # TODO still not clear whether the following two options are needed
     parser.add_option("-E", "--num-of-epsilon-states", dest="num_epsilons",
                       type="int", metavar="N", default=0, help="number of " +
                       "(non-initial and non-final) states, that doesn't " + 
