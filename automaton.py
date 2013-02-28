@@ -37,9 +37,9 @@ class Automaton(object):
             if state1 not in tr:
                 tr[state1] = {}
             prob = float(probstr)
-            if not (prob >= 0.0 and prob <= 1.0):
-                raise ValueError("invalid probabilities in {0}".format(
-                    filename))
+            if not (prob < 0.0):
+                raise ValueError("invalid probabilities in {0}, ".format(
+                    filename) + "only logprobs are accepted." )
 
             tr[state1][state2] = prob
         f.close()
@@ -60,8 +60,9 @@ class Automaton(object):
             automaton.m_emittors[s1[:-2]].add(s1)
             automaton.emissions[s2] = s2[:-2]
             automaton.m_emittors[s2[:-2]].add(s2)
-            if weight > 0.0:
-                automaton.m[s1][s2] = math.log(weight)
+            if weight >= 0.0:
+                raise ValueError("Only logprogs are accepted in dumps")
+            automaton.m[s1][s2] = weight
 
         for node in automaton.m.iterkeys():
             automaton.check_node_sum(node)
@@ -149,11 +150,8 @@ class Automaton(object):
             if valid_next_states == states_initialized:
                 continue
 
-            #sys.stderr.write('{0} {1}\n'.format(s1, valid_next_states))
             u = (1.0 - init_total) / (len(valid_next_states) - len(states_initialized))
             for s2 in valid_next_states - states_initialized:
-                #sys.stderr.write(s2)
-                #sys.stderr.write('foo')
                 try:
                     automaton.m[s1][s2] = math.log(u)
                 except ValueError:
@@ -183,6 +181,8 @@ class Automaton(object):
                     automaton.m[item[i]][item[i+1]] += cnt / total
                 else:
                     automaton.m[item[i]][item[i+1]] = cnt / total
+
+        # changing to log probs and normalize
         for node1, outs in automaton.m.iteritems():
             for node2 in outs.iterkeys():
                 outs[node2] = math.log(outs[node2])
@@ -310,6 +310,7 @@ class Automaton(object):
         return abs(p1 - p2)
 
     def distance_from_corpus(self, corpus, distfp):
+        # TODO rethink prob vs logprob problem
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, prob in corpus.iteritems():
@@ -345,7 +346,7 @@ class Automaton(object):
         """Smooth zero transition probabilities"""
         for state, edges in self.m.iteritems():
             total_log = math.log(sum(math.exp(v) for v in edges.values()))
-            added = 0
+            added = 0.0
             eps = Automaton.eps
             for other_state in edges:
                 old_val = math.exp(edges.get(other_state, Automaton.m_inf))
@@ -387,7 +388,7 @@ class Automaton(object):
             for n2 in nodes + ['$']:
                 if n2 in self.m[n1]:
                     f.write("{0} -> {1}: {2}\n".format(
-                        n1, n2, math.exp(self.m[n1][n2])))
+                        n1, n2, self.m[n1][n2]))
         for n1, em in self.emissions.iteritems():
             f.write("{0}: \"{1}\"\n".format(n1, em))
     

@@ -133,8 +133,8 @@ class Learner(object):
         option_randomizer = lambda: self.randomize_automaton_change()
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
-        mdl_ = mdl(self.automaton, self.corpus, self.code.bits, self.distfp,
-                   n_state=0, n_alphabet=0, n_word=0)
+        mdl_ = mdl(self.automaton, self.corpus, self.automaton.code.bits,
+                   self.distfp, n_state=0, n_alphabet=0, n_word=0)
         logging.info("Learning is finished. MDL is {0}".format(mdl_))
 
 def optparser():
@@ -207,7 +207,7 @@ def main(options):
 
     output = sys.stdout
     if options.output:
-        output = options.output
+        output = open(options.output, "w")
         learner.automaton.dump(output)
 
 if __name__ == "__main__":
