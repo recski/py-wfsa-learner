@@ -294,8 +294,8 @@ class Automaton(object):
 
     @staticmethod
     def kullback(p1, p2):
-        if p1 == 0:
-            return 0
+        if p1 == 0.0:
+            return 0.0
         return p1 * math.log(p1/p2)
 
     @staticmethod
@@ -307,17 +307,14 @@ class Automaton(object):
         return abs(p1 - p2)
 
     def distance_from_corpus(self, corpus, distfp):
-        # TODO rethink prob vs logprob problem
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
-        for item, prob in corpus.iteritems():
-            if prob>0 :
-                modeledProb = math.exp(probs[item])
-                if modeledProb==0.0 :
-                    modeledProb = 1e-50
-                    #raise Exception("nem kene ezt kezelni?")
-                    #egyelore nem
-                distance += distfp(prob, modeledProb)
+        for item, corpus_p in corpus.iteritems():
+            if corpus_p > 0.0:
+                modeled_p = math.exp(probs[item])
+                if modeled_p == 0.0:
+                    modeled_p = Automaton.eps
+                distance += distfp(corpus_p, modeled_p)
         return distance
 
     def round_and_normalize_state(self, state):
