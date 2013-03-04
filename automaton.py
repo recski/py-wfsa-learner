@@ -65,6 +65,7 @@ class Automaton(object):
             automaton.m[s1][s2] = weight
 
         for node in automaton.m.iterkeys():
+            print node
             automaton.check_node_sum(node)
 
         automaton.finalize()
@@ -131,11 +132,8 @@ class Automaton(object):
                         raise Exception("invalid state name in init: %s" % s2)
 
                     prob = initial_transitions[s1][s2]
-                    try:                      
-                        automaton.m[s1][s2] = math.log(prob)
-                    except ValueError:
-                        automaton.m[s1][s2] = Automaton.m_inf
-                    init_total += prob
+                    automaton.m[s1][s2] = prob
+                    init_total += math.exp(prob)
                     states_initialized.add(s2)
                     # TODO refactor this
                     if init_total > 1.0000001:
