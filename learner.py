@@ -89,10 +89,7 @@ class Learner(object):
         tempq = self.temp_quotient
         turns_for_each_temp = self.turns_for_each
 
-        #self.automaton.dump(sys.stdout)
         energy = compute_energy()
-        #self.automaton.dump(sys.stdout)
-        #quit()
         turn_count = 0
         while True:
             if turn_count == 0:
@@ -208,9 +205,9 @@ def main(options):
     output = sys.stdout
     if options.output:
         output = open(options.output, "w")
-        learner.automaton.dump(output)
+    learner.automaton.dump(output)
 
 if __name__ == "__main__":
     options = optparser()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     main(options)
