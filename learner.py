@@ -209,5 +209,5 @@ def main(options):
 
 if __name__ == "__main__":
     options = optparser()
-    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s")
     main(options)

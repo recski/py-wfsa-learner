@@ -21,3 +21,4 @@ def moore_mdl(automaton, corpus, bits, distfp, n_state, n_alphabet):
 
     # adding the transition probabilities
     dump += 2.0 * math.log(n_state) * bits
+    return dump
