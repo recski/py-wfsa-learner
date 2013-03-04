@@ -342,26 +342,17 @@ class Automaton(object):
 
     def smooth(self):
         """Smooth zero transition probabilities"""
+        eps = math.log(Automaton.eps)
         for state, edges in self.m.iteritems():
-            total_log = math.log(sum(math.exp(v) for v in edges.values()))
-            added = 0.0
-            eps = Automaton.eps
             for other_state in edges:
-                old_val = math.exp(edges.get(other_state, Automaton.m_inf))
+                old_val = edges.get(other_state, Automaton.m_inf)
                 if old_val < eps:
-                    edges[other_state] = math.log(eps)
-                    added += eps - old_val
-                if added >= 1.0:
-                    raise Exception("Too much probability " +
-                                    "added while smoothing")
+                    edges[other_state] = eps
 
-            # normalize the nodes that haven't been smoothed
-            for n in edges:
-                if edges[n] > math.log(eps):
-                    edges[n] -= total_log - math.log(1 - added)
-
-            #if abs(sum(edges.values()) - 1.0) > eps:
-            #    raise Exception("Edges sum up to too much")
+            # normalize the transitions
+            #logging.warning("When normalizing, smoothed value won't be " +
+                            #"actually log(Automaton.eps) but a smaller value")
+            self.normalize_node(state)
 	        
     def boost_edge(self, edge, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""
@@ -432,6 +423,10 @@ def optparser():
                       help="number of states per letter of alphabet " + 
                      "[default=%default]")
 
+    parser.add_option("", "--no-smoothing", dest="smooth", default=True,
+                      action="store_false",
+                      help="Turn of smoothing")
+
     (options, args) = parser.parse_args()
     return options
 
@@ -450,6 +445,8 @@ def create_wfsa(options):
         automaton = Automaton.create_uniform_automaton(
             numbers_per_letters, initial_transitions=initial_transitions)
         automaton.dump(output)
+        if not options.smooth:
+            automaton.smooth()
         return
 
     if options.numstate:
@@ -463,6 +460,8 @@ def create_wfsa(options):
 
         automaton = Automaton.create_uniform_automaton(
             numbers_per_letters, initial_transitions)
+        if options.smooth:
+            automaton.smooth()
         automaton.dump(output)
         return
 
@@ -474,7 +473,8 @@ def create_wfsa(options):
         corpus = read_corpus(input_, options.separator)
         corpus = normalize_corpus(corpus)
         automaton = Automaton.create_from_corpus(corpus)
-        automaton.smooth()
+        if options.smooth:
+            automaton.smooth()
         automaton.dump(output)
         return
 
