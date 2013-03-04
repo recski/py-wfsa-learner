@@ -57,19 +57,19 @@ class Learner(object):
 
     def randomize_automaton_change(self):
         change_options = {}
-        n1 = None
-        n2 = None
-        nodes = self.automaton.m.keys()
+        s1 = None
+        s2 = None
+        states = self.automaton.m.keys()
         while True:
-            n1 = random.choice(nodes)
-            n2 = random.choice(self.automaton.m[n1].keys())
+            s1 = random.choice(states)
+            s2 = random.choice(self.automaton.m[s1].keys())
             if not hasattr(self, "previous_change_options"):
                 break
             else:
                 if not (self.previous_change_options["result"] == False and
-                (n1, n2) == self.previous_change_options["edge"]):
+                (s1, s2) == self.previous_change_options["edge"]):
                     break
-        change_options["edge"] = (n1, n2)
+        change_options["edge"] = (s1, s2)
         change_options["factor"] = (self.factor if random.random() > 0.5
                                     else 2.0 - self.factor)
         return change_options
