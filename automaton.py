@@ -64,9 +64,8 @@ class Automaton(object):
                 raise ValueError("Only logprogs are accepted in dumps")
             automaton.m[s1][s2] = weight
 
-        for node in automaton.m.iterkeys():
-            print node
-            automaton.check_node_sum(node)
+        for state in automaton.m.iterkeys():
+            automaton.check_state_sum(state)
 
         automaton.finalize()
         return automaton
@@ -181,10 +180,10 @@ class Automaton(object):
                     automaton.m[item[i]][item[i+1]] = cnt / total
 
         # changing to log probs and normalize
-        for node1, outs in automaton.m.iteritems():
-            for node2 in outs.iterkeys():
-                outs[node2] = math.log(outs[node2])
-            automaton.normalize_node(node1)
+        for state1, outs in automaton.m.iteritems():
+            for state2 in outs.iterkeys():
+                outs[state2] = math.log(outs[state2])
+            automaton.normalize_state(state1)
 
         for l in alphabet:
             automaton.emissions[l] = l
@@ -321,24 +320,24 @@ class Automaton(object):
                 distance += distfp(prob, modeledProb)
         return distance
 
-    def round_and_normalize_node(self, node):
+    def round_and_normalize_state(self, state):
         if self.code:
-            self.round_transitions(self.m[node]) 
-        self.normalize_node(node)
+            self.round_transitions(self.m[state]) 
+        self.normalize_state(state)
     
     def round_transitions(self, edges):
         for state, weight in edges.iteritems():
             edges[state] = self.code.representer(weight)
 
-    def normalize_node(self, node):
-        edges = self.m[node]
+    def normalize_state(self, state):
+        edges = self.m[state]
         total_log = math.log(sum(math.exp(v) for v in edges.values()))
-        for n2 in edges.keys():
-            edges[n2] -= total_log
+        for s2 in edges.keys():
+            edges[s2] -= total_log
     
     def round_and_normalize(self):
         for state in self.m.iterkeys():
-            self.round_and_normalize_node(state)
+            self.round_and_normalize_state(state)
 
     def smooth(self):
         """Smooth zero transition probabilities"""
@@ -352,34 +351,34 @@ class Automaton(object):
             # normalize the transitions
             #logging.warning("When normalizing, smoothed value won't be " +
                             #"actually log(Automaton.eps) but a smaller value")
-            self.normalize_node(state)
+            self.normalize_state(state)
 	        
     def boost_edge(self, edge, factor):
         """Multiplies the transition probability between n1 and n2 by factor"""
-        n1, n2 = edge
-        self.m[n1][n2] += math.log(factor)
-        self.round_and_normalize_node(n1)
-        self.check_node_sum(n1)
+        s1, s2 = edge
+        self.m[s1][s2] += math.log(factor)
+        self.round_and_normalize_state(s1)
+        self.check_state_sum(s1)
 
-    def check_node_sum(self, node):
-        edges = self.m[node]
+    def check_state_sum(self, state):
+        edges = self.m[state]
         eps = Automaton.eps
-        n_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
-        if n_sum < 1 + eps and n_sum > 1 - eps:
+        s_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
+        if abs(1.0 - s_sum) < eps:
             return
         else:
             raise Exception("transitions from state don't sum to 1, " +
-                          "but {0}".format(n_sum))
+                          "but {0}".format(s_sum))
 
     def dump(self, f):
-        nodes = sorted(self.m.keys())
-        for n1 in nodes:
-            for n2 in nodes + ['$']:
-                if n2 in self.m[n1]:
+        states = sorted(self.m.keys())
+        for s1 in states:
+            for s2 in states + ['$']:
+                if s2 in self.m[s1]:
                     f.write("{0} -> {1}: {2}\n".format(
-                        n1, n2, self.m[n1][n2]))
-        for n1, em in self.emissions.iteritems():
-            f.write("{0}: \"{1}\"\n".format(n1, em))
+                        s1, s2, self.m[s1][s2]))
+        for s1, em in self.emissions.iteritems():
+            f.write("{0}: \"{1}\"\n".format(s1, em))
     
 def optparser():
     parser = OptionParser()
