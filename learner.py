@@ -7,7 +7,7 @@ from optparse import OptionParser
 from automaton import Automaton
 from code import AbstractCode
 from corpus import read_corpus, normalize_corpus
-from mdl import mdl
+from mdl import moore_mdl as mdl
 
 class Learner(object):
     def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
@@ -130,9 +130,10 @@ class Learner(object):
         option_randomizer = lambda: self.randomize_automaton_change()
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
-        mdl_ = mdl(self.automaton, self.corpus, self.automaton.code.bits,
-                   self.distfp, n_state=0, n_alphabet=0, n_word=0)
+        mdl_, aut_size, err = mdl(self.automaton, self.corpus,
+                                  self.automaton.code.bits, self.distfp)
         logging.info("Learning is finished. MDL is {0}".format(mdl_))
+        print mdl_, aut_size, err
 
 def optparser():
     parser = OptionParser()

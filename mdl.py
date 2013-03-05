@@ -10,15 +10,20 @@ def mdl(automaton, corpus, bits, distfp, n_state, n_alphabet, n_word):
     result = transition_n * bits_per_transition + err
     return result
 
-def moore_mdl(automaton, corpus, bits, distfp, n_state, n_alphabet):
+def moore_mdl(automaton, corpus, bits, distfp, n_words=135):
     dump = 0.0
 
     # adding the number of states
-    dump += math.log(math.log(len(automaton.m.keys())))
+    n_state = len(automaton.m.keys())
+    dump += math.log(math.log(n_state))
 
     # adding the emissions per state
+    n_alphabet = len(automaton.m_emittors)
     dump += n_state * math.log(n_alphabet)
 
     # adding the transition probabilities
     dump += 2.0 * math.log(n_state) * bits
-    return dump
+
+    err = automaton.distance_from_corpus(corpus, distfp) * n_words
+
+    return err + dump, dump, err
