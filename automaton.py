@@ -62,7 +62,7 @@ class Automaton(object):
             s2e = s2.split("_")[0]
             automaton.emissions[s2] = s2e
             automaton.m_emittors[s2e].add(s2)
-            if weight >= 0.0:
+            if weight > 0.0:
                 raise ValueError("Only logprogs are accepted in dumps")
             automaton.m[s1][s2] = weight
 
@@ -361,9 +361,8 @@ class Automaton(object):
 
     def check_state_sum(self, state):
         edges = self.m[state]
-        eps = Automaton.eps
         s_sum = sum([math.exp(log_prob) for log_prob in edges.values()])
-        if abs(1.0 - s_sum) < eps:
+        if abs(1.0 - s_sum) < 1e-3:
             return
         else:
             raise Exception("transitions from state don't sum to 1, " +
