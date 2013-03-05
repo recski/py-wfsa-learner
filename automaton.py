@@ -56,10 +56,12 @@ class Automaton(object):
             s1, _, s2, weight = l
             s2 = s2.strip(':')
             weight = float(weight)
-            automaton.emissions[s1] = s1[:-2]
-            automaton.m_emittors[s1[:-2]].add(s1)
-            automaton.emissions[s2] = s2[:-2]
-            automaton.m_emittors[s2[:-2]].add(s2)
+            s1e = s1.split("_")[0]
+            automaton.emissions[s1] = s1e
+            automaton.m_emittors[s1e].add(s1)
+            s2e = s2.split("_")[0]
+            automaton.emissions[s2] = s2e
+            automaton.m_emittors[s2e].add(s2)
             if weight >= 0.0:
                 raise ValueError("Only logprogs are accepted in dumps")
             automaton.m[s1][s2] = weight
