@@ -62,6 +62,9 @@ class Learner(object):
         states = self.automaton.m.keys()
         while True:
             s1 = random.choice(states)
+            if len(self.automaton.m[s1]) < 2:
+                continue
+
             s2 = random.choice(self.automaton.m[s1].keys())
             if not hasattr(self, "previous_change_options"):
                 break
