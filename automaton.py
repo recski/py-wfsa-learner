@@ -252,6 +252,11 @@ class Automaton(object):
             for epsilonState in self.emittors("EPSILON"):
                 # we already have this value because epsilon states
                 # came first
+
+                # if the automaton is not complete, avoid KeyError:
+                if not state in self.m[epsilonState]:
+                    continue
+
                 soFar = memo[string][epsilonState]
                 soFar += self.m[epsilonState][state]
                 total = max(soFar, total)
@@ -285,7 +290,7 @@ class Automaton(object):
         topsorted = closure_and_top_sort(strings)
 
         # memo[string][state] = probabilityOfState(self,string,state)
-        memo = defaultdict(lambda: defaultdict(float))
+        memo = defaultdict(lambda: defaultdict(lambda: Automaton.m_inf))
         output = {}
 
         for string in topsorted :
