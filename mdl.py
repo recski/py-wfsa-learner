@@ -1,5 +1,6 @@
 import math
 import logging
+from automaton import Automaton
 
 def mdl(automaton, corpus, bits, distfp, n_state, n_alphabet, n_word):
     logging.warning("Not implemented yet, mealy-moore problem.")
@@ -10,7 +11,7 @@ def mdl(automaton, corpus, bits, distfp, n_state, n_alphabet, n_word):
     result = transition_n * bits_per_transition + err
     return result
 
-def moore_mdl(automaton, corpus, bits, distfp, n_words=135):
+def moore_mdl(automaton, corpus, bits, n_words=135):
     dump = 0.0
 
     # adding the number of states
@@ -24,6 +25,6 @@ def moore_mdl(automaton, corpus, bits, distfp, n_words=135):
     # adding the transition probabilities
     dump += 2.0 * math.log(n_state) * bits
 
-    err = automaton.distance_from_corpus(corpus, distfp) * n_words
+    err = automaton.distance_from_corpus(corpus, Automaton.kullback) * n_words
 
     return err + dump, dump, err

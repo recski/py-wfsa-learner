@@ -131,7 +131,7 @@ class Learner(object):
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
         mdl_, aut_size, err = mdl(self.automaton, self.corpus,
-                                  self.automaton.code.bits, self.distfp)
+                                  self.automaton.code.bits)
         logging.info("Learning is finished. MDL is {0}".format(mdl_))
         print mdl_, aut_size, err
 
