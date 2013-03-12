@@ -94,6 +94,8 @@ class Learner(object):
 
         energy = compute_energy()
         turn_count = 0
+        prev = None
+        prev_prev = None
         while True:
             if turn_count == 0:
                 logging.info("Running an iteration of Simulated Annealing with " +
@@ -124,6 +126,12 @@ class Learner(object):
                 temperature *= tempq
                 if temperature < end:
                     break
+
+                #if prev_prev is not None and abs(energy - prev_prev) < 1e-8:
+                    #break
+                
+                prev_prev = prev
+                prev = energy
 
     def main(self):
         compute_energy = lambda: self.automaton.distance_from_corpus(
