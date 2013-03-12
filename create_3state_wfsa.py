@@ -103,12 +103,12 @@ def create_new_three_state_fsa(corpus):
         fsa.m[prefix+'_0']['EPSILON_0'] = 0.0
     
     for suffix, s_freq in suffixes.iteritems():
-        log_half_suffix_weight = math.log(0.5*(s_freq/total_suffix_freq))
+        fsa.m['EPSILON_0'][suffix+'_0'] = math.log(
+                                        (0.5*s_freq)/total_suffix_freq)
         #the two 0.5s cancel each other out, which reflects that once
         #we got as far as the epsilon state, it doesn't matter anymore
         #whether we allowed suffixes to follow the start state or not
-        fsa.m['EPSILON_0'][suffix+'_0'] = log_half_suffix_weight
-        fsa.m['^'][suffix+'_0'] = log_half_suffix_weight
+        fsa.m['^'][suffix+'_0'] = math.log((0.5*s_freq)/total_prefix_freq)
         fsa.m[suffix+'_0']['$'] = 0.0
     
     return fsa
