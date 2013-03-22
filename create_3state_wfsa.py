@@ -84,6 +84,36 @@ def create_three_state_fsa(corpus):
     
     return fsa
 
+def create_new_three_state_fsa(corpus):
+    """This fsa will not make use of an "O" state and will have edges from the start state to all word-final morphemes"""
+    prefixes, suffixes = get_morpheme_frequencies(corpus)    
+    fsa = Automaton()
+    for morpheme in prefixes.keys()+suffixes.keys():
+        state = morpheme+'_0'
+        fsa.emissions[state] = morpheme
+        fsa.m_emittors[morpheme].add(state)
+
+    total_suffix_freq = sum(suffixes.values())*0.5
+    total_prefix_freq = sum(prefixes.values())+total_suffix_freq
+    #half of suffix frequencies should appear on edges from the epsilon state,
+    #the other half on edges from the starting state
+    
+    for prefix, p_freq in prefixes.iteritems(): 
+        fsa.m['^'][prefix+'_0'] = math.log(p_freq/total_prefix_freq)
+        fsa.m[prefix+'_0']['EPSILON_0'] = 0.0
+    
+    for suffix, s_freq in suffixes.iteritems():
+        fsa.m['EPSILON_0'][suffix+'_0'] = math.log(
+                                        (0.5*s_freq)/total_suffix_freq)
+        #the two 0.5s cancel each other out, which reflects that once
+        #we got as far as the epsilon state, it doesn't matter anymore
+        #whether we allowed suffixes to follow the start state or not
+        fsa.m['^'][suffix+'_0'] = math.log((0.5*s_freq)/total_prefix_freq)
+        fsa.m[suffix+'_0']['$'] = 0.0
+    
+    return fsa
+
+
 def main():
     corpus = read_corpus(sys.stdin)
     n_corpus = normalize_corpus(corpus)
@@ -95,6 +125,8 @@ def main():
         fsa_creator = lambda corpus: create_hogy_fsa(corpus)
     elif fsa_type == 'o':
         fsa_creator = lambda corpus: create_o_fsa(corpus)
+    elif fsa_type == 'new':
+        fsa_creator = lambda corpus: create_new_three_state_fsa(corpus)
     else:
         logging.critical('unknown fsa type: {0}'.format(fsa_type))
         sys.exit(-1)
