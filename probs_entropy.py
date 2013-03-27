@@ -10,11 +10,14 @@ from automaton import Automaton
 
 def compute_entropy(probs, code):
     dist = 0.0
+    modeled_sum = sum([math.exp(code.representer(math.log(prob))) for prob in probs])
     for prob in probs:
         prob_q = math.exp(code.representer(math.log(prob)))
         if prob_q == 0.0:
             prob_q = Automaton.eps
+        prob_q /= modeled_sum
         dist += Automaton.kullback(prob, prob_q)
+        #print prob, prob_q, Automaton.kullback(prob, prob_q)
     return dist
 
 def main():
