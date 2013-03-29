@@ -162,8 +162,7 @@ class Automaton(object):
     @staticmethod
     def create_from_corpus(corpus):
         """ Creates an automaton from a corpus, where @corpus is a dict from
-        items (str or tuple) to counts
-        """
+        items (str or tuple) to counts"""
         automaton = Automaton()
         alphabet = set()
         total = float(sum(corpus.itervalues()))
