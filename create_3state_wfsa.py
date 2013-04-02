@@ -11,10 +11,9 @@ import logging
 def get_morpheme_frequencies(corpus):
     prefixes = defaultdict(int)
     suffixes = defaultdict(int)
-    for word, freq in corpus.iteritems():
-        morphemes = word.split('#')
+    for morphemes, freq in corpus.iteritems():
         if len(morphemes)==1:
-            prefixes['O']+=freq
+            prefixes['EPSILON']+=freq
             suffixes[morphemes[0]]+=freq
         elif len(morphemes)==2:
             prefixes[morphemes[0]]+=freq
@@ -100,10 +99,10 @@ def create_new_three_state_fsa(corpus):
     
     for prefix, p_freq in prefixes.iteritems(): 
         fsa.m['^'][prefix+'_0'] = math.log(p_freq/total_prefix_freq)
-        fsa.m[prefix+'_0']['EPSILON_0'] = 0.0
+        fsa.m[prefix+'_0']['EPSILON_1'] = 0.0
     
     for suffix, s_freq in suffixes.iteritems():
-        fsa.m['EPSILON_0'][suffix+'_0'] = math.log(
+        fsa.m['EPSILON_1'][suffix+'_0'] = math.log(
                                         (0.5*s_freq)/total_suffix_freq)
         #the two 0.5s cancel each other out, which reflects that once
         #we got as far as the epsilon state, it doesn't matter anymore
@@ -115,7 +114,7 @@ def create_new_three_state_fsa(corpus):
 
 
 def main():
-    corpus = read_corpus(sys.stdin)
+    corpus = read_corpus(sys.stdin, separator="#")
     n_corpus = normalize_corpus(corpus)
     file_name = sys.argv[1]
     fsa_type = sys.argv[2]
