@@ -10,8 +10,8 @@ def create_word_wfsa(corpus):
     for word in corpus:
         prob = corpus[word]
         state = "".join(word) + "_0"
-        wfsa.emissions[state] = word
-        wfsa.m_emittors[word].add(state)
+        wfsa.emissions[state] = "".join(word)
+        wfsa.m_emittors["".join(word)].add(state)
         wfsa.m["^"][state] = math.log(prob)
         wfsa.m[state]["$"] = 0 # log(1)
     return wfsa
