@@ -217,6 +217,7 @@ class Automaton(object):
         for state1, transitions in self.m.iteritems():
             self.m[state1] = dict(transitions)
         self.m = dict(self.m)
+        self.m_emittors = dict(self.m_emittors)
     
     def emittors(self, letter):
         return self.m_emittors[letter]
@@ -235,6 +236,7 @@ class Automaton(object):
 
         head = string[:-1]
         tail = string[-1]
+
         total = Automaton.m_inf
         # compute real emissions
         for previousState in self.emittors(tail):
@@ -247,7 +249,8 @@ class Automaton(object):
             #total = math.log(math.exp(soFar) + math.exp(total))
 
         # check the case of epsilon emission
-        if not Automaton.nonemitting(state):
+        if (not Automaton.nonemitting(state)
+            and "EPSILON" in self.m_emittors):
             for epsilonState in self.emittors("EPSILON"):
                 # we already have this value because epsilon states
                 # came first
@@ -267,16 +270,12 @@ class Automaton(object):
         states = set(self.m.keys())
         states.add("$")
         states.remove("^")
-        logging.debug(string)
-        logging.debug(memo)
 
         # first compute the epsilon states probs because of the
         # memoization dependency
         for state in sorted(states,
                      key=lambda x: not Automaton.is_epsilon_state(x)):
-            logging.debug(state)
             self.update_probability_of_string_in_state(string, state, memo)
-            logging.debug(memo)
 
     def probability_of_strings(self, strings) :
         """
@@ -294,7 +293,6 @@ class Automaton(object):
 
         for string in topsorted :
             self.update_probability_of_string(string, memo)
-
             output[string] = memo[string]["$"]
         return output
 
@@ -312,7 +310,7 @@ class Automaton(object):
     def l1err(p1, p2):
         return abs(p1 - p2)
 
-    def distance_from_corpus(self, corpus, distfp):
+    def distance_from_corpus(self, corpus, distfp, reverse=False):
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, corpus_p in corpus.iteritems():
@@ -320,7 +318,8 @@ class Automaton(object):
                 modeled_p = math.exp(probs[item])
                 if modeled_p == 0.0:
                     modeled_p = Automaton.eps
-                distance += distfp(corpus_p, modeled_p)
+                distance += (distfp(corpus_p, modeled_p) if not reverse
+                             else distfp(modeled_p, corpus_p))
         return distance
 
     def round_and_normalize_state(self, state):
