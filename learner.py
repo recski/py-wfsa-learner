@@ -144,6 +144,7 @@ class Learner(object):
         mdl_, aut_size, err = mdl(self.automaton, self.corpus,
                                   self.automaton.code.bits)
         logging.info("Learning is finished. MDL is {0}".format(mdl_))
+        return mdl_, aut_size, err
 
 def optparser():
     parser = OptionParser()
