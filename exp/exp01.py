@@ -19,59 +19,70 @@ from learner import Learner
 
 def generate_codes():
     for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
-    #for bits in [4]:
         for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
-        #for cutoff in [-11]:
             code = LogLinCode(bits, cutoff)
             yield code
 
-def main():
-    corpus_fn = "../data/lemma_count"
+def create_corpora(corpus_fn):
     unigram_corpus = read_corpus(open(corpus_fn))
     unigram_corpus = dict([(k.replace("#", ""), v)
                            for k, v in unigram_corpus.iteritems()])
     normalize_corpus(unigram_corpus)
+
     morpheme_corpus = read_corpus(open(corpus_fn), "#")
     normalize_corpus(morpheme_corpus)
+    return unigram_corpus, morpheme_corpus
 
+def create_wfsas(unigram_corpus, morpheme_corpus):
     baseline_unigram_wfsa = create_word_wfsa(unigram_corpus)
     baseline_unigram_wfsa.finalize()
     baseline_morpheme_wfsa = create_word_wfsa(morpheme_corpus)
     baseline_morpheme_wfsa.finalize()
     three_states_wfsa = create_new_three_state_fsa(morpheme_corpus)
     three_states_wfsa.finalize()
+    return baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa
+
+def encode_learn_wfsa(wfsa, code, corpus, encoder, distfp=None):
+    """encode a wfsa based on arguments and run a learning on it if
+    a distance parameter is given
+    """
+    wfsa = copy(wfsa)
+    wfsa.code = code
+    wfsa.round_and_normalize()
+    if distfp is not None:
+        learner = Learner(wfsa, corpus, pref_prob=0.0,
+            distfp=distfp, turns_for_each=40, factor=0.8,
+            start_temp=1e-5, end_temp=1e-7, tempq=0.9)
+        learner.main()
+    return encoder.encode(wfsa, corpus)
+
+def main():
+    corpus_fn = "../data/lemma_count"
+    unigram_corpus, morpheme_corpus = create_corpora(corpus_fn)
+    (baseline_unigram_wfsa, baseline_morpheme_wfsa,
+        three_states_wfsa) = create_wfsas(unigram_corpus, morpheme_corpus)
+
     morpheme_encoder = Encoder(3.1196)
     unigram_encoder = Encoder(4.7872)
+
+    # later this won't be needed
     unigram_tuple_corpus = dict([((k, ), v) for k, v in unigram_corpus.iteritems()])
-    #morpheme_tuple_corpus = dict([((k, ), v) for k, v in unigram_corpus.iteritems()])
 
     for code in generate_codes():
         logging.info("Running {0} {1}".format(code.bits, code.neg_cutoff))
         print code.bits, code.neg_cutoff,
-        wfsa = copy(baseline_unigram_wfsa)
-        wfsa.code = code
-        wfsa.round_and_normalize()
-        uni_bits, uni_err, uni_all = unigram_encoder.encode(wfsa,
-            unigram_tuple_corpus)
+
+        uni_bits, uni_err, uni_all = encode_learn_wfsa(baseline_unigram_wfsa,
+            code, unigram_tuple_corpus, unigram_encoder)
         print uni_bits, uni_err, uni_all,
 
-        wfsa = copy(baseline_morpheme_wfsa)
-        wfsa.code = code
-        wfsa.round_and_normalize()
-        morph_bits, morph_err, morph_all = morpheme_encoder.encode(wfsa,
-            morpheme_corpus)
-        quit()
+        morph_bits, morph_err, morph_all = encode_learn_wfsa(baseline_morpheme_wfsa,
+            code, morpheme_corpus, morpheme_encoder)
         print morph_bits, morph_err, morph_all,
 
         for distfp in ["kullback", "l1err", "squarerr"]:
-            wfsa = copy(three_states_wfsa)
-            wfsa.code = code
-            learner = Learner(wfsa, morpheme_corpus, pref_prob=0.0,
-                distfp=distfp, turns_for_each=40, factor=0.8,
-                start_temp=1e-5, end_temp=1e-7, tempq=0.9)
-            learner.main()
-            morph_bits, morph_err, morph_all = morpheme_encoder.encode(wfsa,
-                morpheme_corpus)
+            morph_bits, morph_err, morph_all = encode_learn_wfsa(three_states_wfsa,
+                code, morpheme_corpus, morpheme_encoder, distfp)
             print distfp, morph_bits, morph_err, morph_all,
         print
 
