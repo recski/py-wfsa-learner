@@ -34,11 +34,12 @@ def read_corpus(stream, separator=None, silent=False):
                                   line_no, len(a), __FIELD_RANGE))
             else:
                 continue
+        key = a[0]
         if separator is not None and len(separator) > 0:
-            key = tuple(a[0].split(separator))
-        else:
-            key = tuple(a[0])
-        if len(a)==1 :
+            key = key.split(separator)
+        key = tuple((symbol if len(symbol) > 0 else "EPSILON")
+                    for symbol in key)
+        if len(a)==1:
             corpus[key] += 1
         else :
             corpus[key] += int(a[1])
