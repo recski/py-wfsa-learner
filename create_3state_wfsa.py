@@ -12,10 +12,7 @@ def get_morpheme_frequencies(corpus):
     prefixes = defaultdict(int)
     suffixes = defaultdict(int)
     for morphemes, freq in corpus.iteritems():
-        if len(morphemes)==1:
-            prefixes['EPSILON']+=freq
-            suffixes[morphemes[0]]+=freq
-        elif len(morphemes)==2:
+        if len(morphemes)==2:
             prefixes[morphemes[0]]+=freq
             suffixes[morphemes[1]]+=freq
         else:
@@ -87,8 +84,10 @@ def create_new_three_state_fsa(corpus):
     """This fsa will not make use of an "O" state and will have edges from the start state to all word-final morphemes"""
     prefixes, suffixes = get_morpheme_frequencies(corpus)    
     fsa = Automaton()
-    for morpheme in prefixes.keys()+suffixes.keys():
-        state = morpheme+'_0'
+    morphemes_with_index = zip(len(prefixes) * [0], prefixes.keys())
+    morphemes_with_index += zip(len(suffixes) * [2], suffixes.keys())
+    for index, morpheme in morphemes_with_index:
+        state = "{0}_{1}".format(morpheme, index)
         fsa.emissions[state] = morpheme
         fsa.m_emittors[morpheme].add(state)
 
@@ -102,13 +101,13 @@ def create_new_three_state_fsa(corpus):
         fsa.m[prefix+'_0']['EPSILON_1'] = 0.0
     
     for suffix, s_freq in suffixes.iteritems():
-        fsa.m['EPSILON_1'][suffix+'_0'] = math.log(
+        fsa.m['EPSILON_1'][suffix+'_2'] = math.log(
                                         (0.5*s_freq)/total_suffix_freq)
         #the two 0.5s cancel each other out, which reflects that once
         #we got as far as the epsilon state, it doesn't matter anymore
         #whether we allowed suffixes to follow the start state or not
-        fsa.m['^'][suffix+'_0'] = math.log((0.5*s_freq)/total_prefix_freq)
-        fsa.m[suffix+'_0']['$'] = 0.0
+        fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
+        fsa.m[suffix+'_2']['$'] = 0.0
     
     return fsa
 
