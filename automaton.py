@@ -83,7 +83,7 @@ class Automaton(object):
         is_degenerate = True
         for letter in alphabet:
             for index in xrange(alphabet[letter]):
-                state = "".join(letter) + "_" + str(index)
+                state = letter + "_" + str(index)
                 automaton.emissions[state] = letter
                 automaton.m_emittors[letter].add(state)
                 if is_degenerate and not Automaton.is_epsilon_state(state):
