@@ -52,19 +52,18 @@ class Automaton(object):
         # create states and emissions
         for line in open(file_name):
             l = line.strip().split()
-            if len(l) != 4: continue
-            s1, _, s2, weight = l
-            s2 = s2.strip(':')
-            weight = float(weight)
-            s1e = s1.split("_")[0]
-            automaton.emissions[s1] = s1e
-            automaton.m_emittors[s1e].add(s1)
-            s2e = s2.split("_")[0]
-            automaton.emissions[s2] = s2e
-            automaton.m_emittors[s2e].add(s2)
-            if weight > 0.0:
-                raise ValueError("Only logprogs are accepted in dumps")
-            automaton.m[s1][s2] = weight
+            if len(l) == 4:
+                s1, _, s2, weight = l
+                s2 = s2.strip(':')
+                weight = float(weight)
+                if weight > 0.0:
+                    raise ValueError("Only logprogs are accepted in dumps")
+                automaton.m[s1][s2] = weight
+            elif len(l) == 2:
+                state = l[0].rstrip(":")
+                emission = eval(l[1])
+                automaton.emissions[state] = emission
+                automaton.m_emittors[emission].add(state)
 
         for state in automaton.m.iterkeys():
             automaton.check_state_sum(state)
@@ -234,8 +233,9 @@ class Automaton(object):
                 memo[string][state] = self.m["^"][state]
             return
 
-        head = string[:-1]
-        tail = string[-1]
+        state_emit_len = len(self.emissions[state])
+        head = string[:-state_emit_len]
+        tail = string[-state_emit_len:]
 
         total = Automaton.m_inf
         # compute real emissions
@@ -379,7 +379,7 @@ class Automaton(object):
                     f.write("{0} -> {1}: {2}\n".format(
                         s1, s2, self.m[s1][s2]))
         for s1, em in self.emissions.iteritems():
-            f.write("{0}: \"{1}\"\n".format(s1, em))
+            f.write("{0}: {1}\n".format(s1, repr(em).replace(" ", "")))
     
 def optparser():
     parser = OptionParser()
