@@ -37,7 +37,7 @@ def read_corpus(stream, separator=None, silent=False):
         if separator is not None and len(separator) > 0:
             key = tuple(a[0].split(separator))
         else:
-            key = a[0]
+            key = tuple(a[0])
         if len(a)==1 :
             corpus[key] += 1
         else :
@@ -66,16 +66,16 @@ def read_dict(stream, silent=False):
         d[le[0]] = int(le[1])
     return d
 
-def get_alphabet(corpus) :
+def get_alphabet(corpus):
     alphabet = defaultdict(int)
-    for w in corpus.keys() :
-        for c in w :
+    for w in corpus.keys():
+        for c in w:
             alphabet[c] += 1
     return alphabet
 
-def normalize_corpus(corpus) :
-    total = sum( corpus.values() )
-    for item,cnt in corpus.iteritems() :
-        corpus[item] = float(cnt)/total
+def normalize_corpus(corpus):
+    total = sum(corpus.values())
+    for item,cnt in corpus.iteritems():
+        corpus[item] = float(cnt) / total
     return corpus
 
