@@ -7,6 +7,7 @@
 
 import sys
 import logging
+from multiprocessing import Pool
 
 sys.path.insert(0, sys.path[0].rsplit("/", 1)[0])
 from corpus import read_corpus, normalize_corpus
@@ -18,10 +19,8 @@ from encoder import Encoder
 from learner import Learner
 
 def generate_codes():
-    for bits in [4]:
-        for cutoff in [-11]:
-    #for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
-        #for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
+    for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
+        for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
             code = LogLinCode(bits, cutoff)
             yield code
 
@@ -56,33 +55,47 @@ def encode_learn_wfsa(wfsa, code, corpus, encoder, distfp=None):
         learner.main()
     return encoder.encode(wfsa, corpus)
 
+def run(args):
+    (code, unigram_corpus, morpheme_corpus, unigram_wfsa, morpheme_wfsa,
+       three_states_wfsa, unigram_encoder, morpheme_encoder) = args
+    res = []
+    logging.info("Running {0} {1}".format(code.bits, code.neg_cutoff))
+    res += [code.bits, code.neg_cutoff]
+
+    uni_bits, uni_err, uni_all = encode_learn_wfsa(
+        unigram_wfsa, code, unigram_corpus,
+        unigram_encoder)
+    res += [uni_bits, uni_err, uni_all]
+
+    morph_bits, morph_err, morph_all = encode_learn_wfsa(
+        morpheme_wfsa, code, morpheme_corpus, 
+        morpheme_encoder)
+    res += [morph_bits, morph_err, morph_all]
+
+    for distfp in ["kullback", "l1err", "squarerr"]:
+        morph_bits, morph_err, morph_all = encode_learn_wfsa(
+            three_states_wfsa, code, morpheme_corpus, 
+            morpheme_encoder, distfp)
+        res += [distfp, morph_bits, morph_err, morph_all]
+    return res
+
 def main():
     corpus_fn = "../data/lemma_count"
     unigram_corpus, morpheme_corpus = create_corpora(corpus_fn)
     (baseline_unigram_wfsa, baseline_morpheme_wfsa,
         three_states_wfsa) = create_wfsas(unigram_corpus, morpheme_corpus)
 
-    morpheme_encoder = Encoder(3.1196)
     unigram_encoder = Encoder(4.7872)
+    morpheme_encoder = Encoder(3.1196)
+    arguments = (unigram_corpus, morpheme_corpus,
+        baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa,
+        unigram_encoder, morpheme_encoder)
 
-    for code in generate_codes():
-        logging.info("Running {0} {1}".format(code.bits, code.neg_cutoff))
-        print code.bits, code.neg_cutoff,
-
-        uni_bits, uni_err, uni_all = encode_learn_wfsa(baseline_unigram_wfsa,
-            code, unigram_corpus, unigram_encoder)
-        print uni_bits, uni_err, uni_all,
-
-        morph_bits, morph_err, morph_all = encode_learn_wfsa(baseline_morpheme_wfsa,
-            code, morpheme_corpus, morpheme_encoder)
-        print morph_bits, morph_err, morph_all,
-
-        for distfp in ["kullback", "l1err", "squarerr"]:
-            morph_bits, morph_err, morph_all = encode_learn_wfsa(three_states_wfsa,
-                code, morpheme_corpus, morpheme_encoder, distfp)
-            print distfp, morph_bits, morph_err, morph_all,
-        print
-
+    pool = Pool(processes=6)
+    codes = list(generate_codes())
+    res = pool.map(run, [(code,) + arguments for code in codes])
+    for r in res:
+        print "\t".join(r)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
