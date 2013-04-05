@@ -233,20 +233,22 @@ class Automaton(object):
                 memo[string][state] = self.m["^"][state]
             return
 
-        state_emit_len = len(self.emissions[state])
-        head = string[:-state_emit_len]
-        tail = string[-state_emit_len:]
 
         total = Automaton.m_inf
         # compute real emissions
-        for previousState in self.emittors(tail):
-            soFar = memo[head][previousState]
-            try:
-                soFar += self.m[previousState][state]
-            except KeyError:
-                soFar = Automaton.m_inf
-            total = max(soFar, total)
-            #total = math.log(math.exp(soFar) + math.exp(total))
+        for previousState in self.emissions:
+            state_emit = self.emissions[previousState]
+            state_emit_l = len(state_emit)
+            if state_emit == string[-state_emit_l:]:
+
+                head = string[:-state_emit_l]
+                soFar = memo[head][previousState]
+                try:
+                    soFar += self.m[previousState][state]
+                except KeyError:
+                    soFar = Automaton.m_inf
+                total = max(soFar, total)
+                #total = math.log(math.exp(soFar) + math.exp(total))
 
         # check the case of epsilon emission
         if (not Automaton.nonemitting(state)
