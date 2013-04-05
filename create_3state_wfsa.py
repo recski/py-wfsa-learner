@@ -15,7 +15,7 @@ def get_morpheme_frequencies(corpus):
         if len(morphemes)==2:
             prefixes[morphemes[0]]+=freq
             suffixes[morphemes[1]]+=freq
-        if len(morphemes)==1:
+        elif len(morphemes)==1:
             suffixes[morphemes[0]]+=freq
         else:
             logging.critical("can't have more than two morphemes \
