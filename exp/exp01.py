@@ -18,15 +18,15 @@ from encoder import Encoder
 from learner import Learner
 
 def generate_codes():
-    for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
-        for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
+    for bits in [4]:
+        for cutoff in [-11]:
+    #for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
+        #for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
             code = LogLinCode(bits, cutoff)
             yield code
 
 def create_corpora(corpus_fn):
     unigram_corpus = read_corpus(open(corpus_fn))
-    unigram_corpus = dict([(k.replace("#", ""), v)
-                           for k, v in unigram_corpus.iteritems()])
     normalize_corpus(unigram_corpus)
 
     morpheme_corpus = read_corpus(open(corpus_fn), "#")
@@ -65,15 +65,12 @@ def main():
     morpheme_encoder = Encoder(3.1196)
     unigram_encoder = Encoder(4.7872)
 
-    # later this won't be needed
-    unigram_tuple_corpus = dict([((k, ), v) for k, v in unigram_corpus.iteritems()])
-
     for code in generate_codes():
         logging.info("Running {0} {1}".format(code.bits, code.neg_cutoff))
         print code.bits, code.neg_cutoff,
 
         uni_bits, uni_err, uni_all = encode_learn_wfsa(baseline_unigram_wfsa,
-            code, unigram_tuple_corpus, unigram_encoder)
+            code, unigram_corpus, unigram_encoder)
         print uni_bits, uni_err, uni_all,
 
         morph_bits, morph_err, morph_all = encode_learn_wfsa(baseline_morpheme_wfsa,
