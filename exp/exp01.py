@@ -95,7 +95,7 @@ def main():
     codes = list(generate_codes())
     res = pool.map(run, [(code,) + arguments for code in codes])
     for r in res:
-        print "\t".join(r)
+        print "\t".join((str(_) for _ in r))
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
