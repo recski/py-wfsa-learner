@@ -12,7 +12,7 @@ class Encoder(object):
         automaton.round_and_normalize()
         automaton_state_bits = math.log(len(automaton.m), 2)
         automaton_bits = 0.0
-        edge_bits = automaton.code.bits
+        edge_bits = automaton.quantizer.bits
         for state in automaton.m:
             logging.debug("State {0}".format(state))
 

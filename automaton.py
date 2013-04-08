@@ -26,7 +26,7 @@ class Automaton(object):
         self.m_emittors = defaultdict(set)
 
         # how edge values can be coded
-        self.code = None
+        self.quantizer = None
 
     @staticmethod
     def read_transitions(filename):
@@ -325,13 +325,13 @@ class Automaton(object):
         return distance
 
     def round_and_normalize_state(self, state):
-        if self.code:
+        if self.quantizer:
             self.round_transitions(self.m[state]) 
         self.normalize_state(state)
     
     def round_transitions(self, edges):
         for state, weight in edges.iteritems():
-            edges[state] = self.code.representer(weight)
+            edges[state] = self.quantizer.representer(weight)
 
     def normalize_state(self, state):
         edges = self.m[state]

@@ -23,7 +23,7 @@ def my_round(number, lowest, highest, bits, interval_len=None):
     transformed_back_into_old_range = normalized_after_round * new_total_length
     return transformed_back_into_old_range
 
-class AbstractCode(object):
+class AbstractQuantizer(object):
     def __init__(self):
         self.rep_to_code = {}
 
@@ -52,35 +52,35 @@ class AbstractCode(object):
 
     @staticmethod
     def read(istream):
-        """ reads a Code class from a file, and depending on first line,
+        """ reads a Quantizer class from a file, and depending on first line,
         it will create one of the sublasses, with calling its read()"""
         l = istream.readline().strip()
         le = l.split("\t")
 
         class_name = le[0][1:] # because it starts with '#'
         constr_args = le[1:]
-        if class_name == "LinearCode":
+        if class_name == "LinearQuantizer":
             bits = int(constr_args[0])
-            coder = LinearCode(bits)
-        elif class_name == "LogLinCode":
+            quantizer = LinearQuantizer(bits)
+        elif class_name == "LogLinQuantizer":
             bits = int(constr_args[0])
             neg_cutoff = float(constr_args[1])
             pos_cutoff = float(constr_args[2])
-            coder = LogLinCode(bits, neg_cutoff, pos_cutoff)
+            quantizer = LogLinQuantizer(bits, neg_cutoff, pos_cutoff)
         else:
-            raise Exception("Unknown Code class in dump")
-        coder.read(istream)
-        return coder
+            raise Exception("Unknown Quantizer class in dump")
+        quantizer.read(istream)
+        return quantizer
 
-class LinearCode(AbstractCode):
+class LinearQuantizer(AbstractQuantizer):
     def __init__(self, bits):
-        AbstractCode.__init__(self)
+        AbstractQuantizer.__init__(self)
         self.bits = bits
         self.interval_to_rep = {}
 
     @staticmethod
     def create(bits, neg, pos):
-        lc = LinearCode(bits)
+        lc = LinearQuantizer(bits)
 
         # keep to codes for -inf and +inf
         int_len = (pos - neg) / (2 ** bits - 2)
@@ -111,7 +111,7 @@ class LinearCode(AbstractCode):
         for l in istream:
             le = l.strip().split("\t")
             if len(le) != 4:
-                raise Exception("LinearCode dump cannot be read, it has " +
+                raise Exception("LinearQuantizer dump cannot be read, it has " +
                                 "a line with not 4 columns")
             code, left, right, rep = le
             code = int(code, 2)
@@ -121,11 +121,11 @@ class LinearCode(AbstractCode):
             self.interval_to_rep[interval] = rep
 
     def _dump_header(self, ostream):
-        AbstractCode._dump_header(self, ostream)
+        AbstractQuantizer._dump_header(self, ostream)
         ostream.write("\t{0}\n".format(self.bits))
 
     def dump(self, ostream):
-        AbstractCode.dump(self, ostream)
+        AbstractQuantizer.dump(self, ostream)
 
         l = [(self.rep_to_code[rep], interval, rep)
               for interval, rep in self.interval_to_rep.iteritems()]
@@ -138,7 +138,7 @@ class LinearCode(AbstractCode):
             ostream.write("{0}\t{1}\t{2}\t{3}\n".format(
                 adjusted_code, interval[0], interval[1], rep))
     
-class LogLinCode(LinearCode):
+class LogLinQuantizer(LinearQuantizer):
     """ Class to realize linear quantizing on log space values"""
 
     def __init__(self, bits, neg_cutoff=-30, pos_cutoff=0):
@@ -151,7 +151,7 @@ class LogLinCode(LinearCode):
                          but below only with epsilon is represented as the
                          previous representer
         """
-        LinearCode.__init__(self, bits)
+        LinearQuantizer.__init__(self, bits)
         self.neg_cutoff = neg_cutoff
         self.pos_cutoff = pos_cutoff
 
@@ -193,12 +193,12 @@ class LogLinCode(LinearCode):
             return val
 
     def read(self, istream):
-        logging.warning("while using LogLinCode class for coding, only " +
+        logging.warning("while using LogLinQuantizer class for coding, only " +
                         "header information is used from dump, intervals " +
                         "are counted from them, other lines are discarded")
 
     def _dump_header(self, ostream):
-        AbstractCode._dump_header(self, ostream)
+        AbstractQuantizer._dump_header(self, ostream)
         ostream.write("\t{0}\t{1}\t{2}\n".format(
             self.bits, self.neg_cutoff, self.pos_cutoff))
 
@@ -206,46 +206,46 @@ def optparser():
     parser = OptionParser()
     parser.add_option("-t", "--type", dest="typ", type="choice",
                       choices=["linear", "loglinear_cutoff"],
-                      help="what kind of quantizer/coder to create. " + 
+                      help="what kind of quantizer to create. " + 
                       "Choices are: linear an loglinear with cutoff")
 
     parser.add_option("-b", "--bits", dest="bits", type="int", default=8,
                       help="how many bits to use. [default=%default]")
 
     parser.add_option("", "--min", dest="low", type="float", default=-30.,
-                      help="lowest value to encode when using linear coder," +
-                     "negative cutoff when using loglinear")
+                      help="lowest value to encode when using linear" +
+                      "quantizer, negative cutoff when using loglinear")
 
-    parser.add_option("", "--max", dest="high", type="float", default=0.,
-                      help="highest value to encode when using linear coder," +
-                     "positive cutoff when using loglinear")
+    parser.add_option("", "--min", dest="low", type="float", default=-30.,
+                      help="highest value to encode when using linear" +
+                      "quantizer, negative cutoff when using loglinear")
 
     parser.add_option("-o", "--output", dest="output", metavar="FILE",
                       type="str", default=None, help="File containing the " +
-                      "dump of the coder object [default=stdout]")
+                      "dump of the quantizer object [default=stdout]")
 
     (options, args) = parser.parse_args()
     return options
 
-def create_coder(options):
+def create_quantizer(options):
     if not options.typ:
-        raise Exception("coder type is mandatory")
+        raise Exception("quantizer type is mandatory")
 
     output = (open(options.output, "w") if options.output else sys.stdout)
 
     if options.typ == "linear":
-        lc = LinearCode.create(options.bits, options.low, options.high)
+        lc = LinearQuantizer.create(options.bits, options.low, options.high)
         lc.dump(output)
         return
     elif options.typ == "loglinear_cutoff":
-        llc = LogLinCode(options.bits, options.low, options.high)
+        llc = LogLinQuantizer(options.bits, options.low, options.high)
         llc.dump(output)
         return
 
 
 def main():
     options = optparser()
-    create_coder(options)
+    create_quantizer(options)
 
 if __name__ == '__main__':
     main()

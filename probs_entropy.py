@@ -1,18 +1,18 @@
-""" Simple script that excepts a coder dump and a corpus, reads them
+""" Simple script that excepts a quantizer dump and a corpus, reads them
 and counts the entropy of the probabilities and quantized probs."""
 
 import sys
 import math
 
-from code import AbstractCode
+from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
 from automaton import Automaton
 
-def compute_entropy(probs, code):
+def compute_entropy(probs, quantizer):
     dist = 0.0
-    modeled_sum = sum([math.exp(code.representer(math.log(prob))) for prob in probs])
+    modeled_sum = sum([math.exp(quantizer.representer(math.log(prob))) for prob in probs])
     for prob in probs:
-        prob_q = math.exp(code.representer(math.log(prob)))
+        prob_q = math.exp(quantizer.representer(math.log(prob)))
         if prob_q == 0.0:
             prob_q = Automaton.eps
         prob_q /= modeled_sum
@@ -21,11 +21,11 @@ def compute_entropy(probs, code):
     return dist
 
 def main():
-    code = AbstractCode.read(open(sys.argv[1]))
+    quantizer = AbstractQuantizer.read(open(sys.argv[1]))
     corp = read_corpus(open(sys.argv[2]), separator="#")
     normalize_corpus(corp)
     probs = corp.values()
-    dist = compute_entropy(probs, code)
+    dist = compute_entropy(probs, quantizer)
     print dist
 
 if __name__ == "__main__":

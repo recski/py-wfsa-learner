@@ -5,7 +5,7 @@ import sys
 from optparse import OptionParser
 
 from automaton import Automaton
-from code import AbstractCode
+from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
 from mdl import moore_mdl as mdl
 
@@ -142,7 +142,7 @@ class Learner(object):
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
         mdl_, aut_size, err = mdl(self.automaton, self.corpus,
-                                  self.automaton.code.bits)
+                                  self.automaton.quantizer.bits)
         return mdl_, aut_size, err
 
 def optparser():
@@ -178,9 +178,9 @@ def optparser():
     parser.add_option("-a", "--automaton-file", dest="automaton_file",
                       metavar="FILE", type="str", default=None,
                       help="File containing the dump of the input automaton")
-    parser.add_option("-q", "--code", dest="code", type="str", default=None,
-                      metavar="FILE",
-                      help="store parameters using a code specified in FILE")
+    parser.add_option("-q", "--quantizer", dest="quantizer", type="str",
+                      default=None, metavar="FILE",
+                      help="store parameters using a quantizer")
     parser.add_option("-c", "--corpus", dest="corpus",
                       default=None, type="str", help="optimize automaton " +
                       "on given corpus. Can be used together with -s. " + 
@@ -200,8 +200,8 @@ def main(options):
         raise Exception("Automaton \"option\" (-a) is mandatory")
     automaton = Automaton.create_from_dump(options.automaton_file)
 
-    if options.code:
-        automaton.code = AbstractCode.read(open(options.code))
+    if options.quantizer:
+        automaton.quantizer = AbstractQuantizer.read(open(options.quantizer))
         automaton.round_and_normalize()
 
     input_ = sys.stdin
