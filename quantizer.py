@@ -216,7 +216,7 @@ def optparser():
                       help="lowest value to encode when using linear" +
                       "quantizer, negative cutoff when using loglinear")
 
-    parser.add_option("", "--min", dest="low", type="float", default=-30.,
+    parser.add_option("", "--max", dest="high", type="float", default=0.,
                       help="highest value to encode when using linear" +
                       "quantizer, negative cutoff when using loglinear")
 
