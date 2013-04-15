@@ -90,7 +90,7 @@ def create_new_three_state_fsa(corpus):
     morphemes_with_index += zip(len(suffixes) * [2], suffixes.keys())
     for index, morpheme in morphemes_with_index:
         state = "{0}_{1}".format(morpheme, index)
-        fsa.emissions[state] = morpheme
+        fsa.emissions[state] = (morpheme,)
         fsa.m_emittors[morpheme].add(state)
 
     total_suffix_freq = sum(suffixes.values())*0.5
