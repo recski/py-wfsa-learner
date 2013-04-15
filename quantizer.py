@@ -182,7 +182,7 @@ class LogLinQuantizer(LinearQuantizer):
         we have cutoffs, though, that we have to watch"""
 
         # if less than anything, return lowest representer
-        if number < self.neg_cutoff:
+        if number <= self.neg_cutoff:
             return self.neg_cutoff
         # if more than anything, return highest representer
         elif self.pos_cutoff != 0 and number > self.pos_cutoff:
