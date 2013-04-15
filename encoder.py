@@ -41,7 +41,7 @@ class Encoder(object):
                 # we only need target state and string and probs
                 target_bits = (automaton_onestate_bits if target != "$" else 0.0)
 
-                actual_edge_bits = (edge_bits if prob != q.representer(q.neg_cutoff) else 1.0)
+                actual_edge_bits = (edge_bits if q.representer(prob) != q.representer(q.neg_cutoff) else 1.0)
 
                 automaton_trans_bits += (source_bits + actual_edge_bits + target_bits)
         return automaton_emission_bits, automaton_trans_bits
