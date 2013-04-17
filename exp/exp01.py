@@ -5,6 +5,7 @@
 - encode both automata with encoder.py based on Quantizer based on different
   entropies e.g. character and morpheme entropy, that are given"""
 
+import os
 import sys
 import logging
 from multiprocessing import Pool
@@ -17,10 +18,14 @@ from quantizer import LogLinQuantizer
 from copy import copy
 from encoder import Encoder
 from learner import Learner
+from automaton import Automaton
 
 def generate_quantizers():
     for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
-        for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
+        for cutoff in [-4,-5,-6,-7,-8,-9,-10]:
+        #for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
+    #for bits in [4, 8]:#, 8]:
+        #for cutoff in [-11]:#, -6]:
             quantizer = LogLinQuantizer(bits, cutoff)
             yield quantizer
 
@@ -41,47 +46,62 @@ def create_wfsas(unigram_corpus, morpheme_corpus):
     three_states_wfsa.finalize()
     return baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa
 
-def encode_learn_wfsa(wfsa, quantizer, corpus, encoder, distfp=None):
-    """encode a wfsa based on arguments and run a learning on it if
-    a distance parameter is given
-    """
+def learn_wfsa(wfsa, corpus, distfp=None):
     wfsa = copy(wfsa)
-    wfsa.quantizer = quantizer
     wfsa.round_and_normalize()
     if distfp is not None:
         learner = Learner(wfsa, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=40, factor=0.8,
+            distfp=distfp, turns_for_each=50, factor=0.8,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
+    return wfsa
+
+def encode_wfsa(wfsa, corpus, encoder):
     return encoder.encode(wfsa, corpus)
 
 def run(args):
-    (quantizer, unigram_corpus, morpheme_corpus, unigram_wfsa, morpheme_wfsa,
-       three_states_wfsa, unigram_encoder, morpheme_encoder) = args
+    (quantizer, wd, unigram_corpus, morpheme_corpus, unigram_wfsa,
+     morpheme_wfsa, three_states_wfsa, unigram_encoder,
+     morpheme_encoder) = args
+
+    # set quantizers
+    unigram_wfsa.quantizer = quantizer
+    morpheme_wfsa.quantizer = quantizer
+    three_states_wfsa.quantizer = quantizer
+
     res = []
     logging.info("Running {0} {1}".format(quantizer.bits,
                                           quantizer.neg_cutoff))
     res += [quantizer.bits, quantizer.neg_cutoff]
 
-    uni_bits, uni_err, uni_all = encode_learn_wfsa(
-        unigram_wfsa, quantizer, unigram_corpus,
-        unigram_encoder)
-    res += [uni_bits, uni_err, uni_all]
+    uni_bits_a, uni_bits_e, uni_bits_t, uni_err = encode_wfsa(
+        unigram_wfsa, unigram_corpus, unigram_encoder)
+    res += [uni_bits_a, uni_bits_e, uni_bits_t, uni_err]
 
-    morph_bits, morph_err, morph_all = encode_learn_wfsa(
-        morpheme_wfsa, quantizer, morpheme_corpus, 
-        morpheme_encoder)
-    res += [morph_bits, morph_err, morph_all]
+    morph_bits_a, morph_bits_e, morph_bits_t, morph_err = encode_wfsa(
+        morpheme_wfsa, morpheme_corpus, morpheme_encoder)
+    res += [morph_bits_a, morph_bits_e, morph_bits_t, morph_err]
 
     for distfp in ["kullback", "l1err", "squarerr"]:
-        morph_bits, morph_err, morph_all = encode_learn_wfsa(
-            three_states_wfsa, quantizer, morpheme_corpus, 
-            morpheme_encoder, distfp)
-        res += [distfp, morph_bits, morph_err, morph_all]
+        learnt_wfsa_filename = "{0}/{1}".format(wd,
+            "learnt_{0}_{1}_{2}.wfsa".format(quantizer.bits,
+                                            quantizer.neg_cutoff,
+                                            distfp))
+        if os.path.exists(learnt_wfsa_filename):
+            learnt_wfsa = Automaton.create_from_dump(learnt_wfsa_filename)
+            learnt_wfsa.quantizer = quantizer
+            learnt_wfsa.round_and_normalize()
+        else:
+            learnt_wfsa = learn_wfsa(three_states_wfsa, morpheme_corpus, distfp)
+            with open(learnt_wfsa_filename, "w") as of:
+                learnt_wfsa.dump(of)
+        morph_bits_a, morph_bits_e, morph_bits_t, morph_err = encode_wfsa(
+            learnt_wfsa, morpheme_corpus, morpheme_encoder)
+        res += [distfp, morph_bits_a, morph_bits_e, morph_bits_t, morph_err]
     return res
 
-def main():
-    corpus_fn = "../data/lemma_count"
+def main(wd):
+    corpus_fn = "../data/lemma_count.tab"
     unigram_corpus, morpheme_corpus = create_corpora(corpus_fn)
     (baseline_unigram_wfsa, baseline_morpheme_wfsa,
         three_states_wfsa) = create_wfsas(unigram_corpus, morpheme_corpus)
@@ -92,12 +112,15 @@ def main():
         baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa,
         unigram_encoder, morpheme_encoder)
 
-    pool = Pool(processes=6)
+    pool = Pool(processes=7)
     quantizers = list(generate_quantizers())
-    res = pool.map(run, [(q,) + arguments for q in quantizers])
+    res = pool.map(run, [(q,wd,) + arguments for q in quantizers])
     for r in res:
         print "\t".join((str(_) for _ in r))
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    main()
+    wd = "."
+    if len(sys.argv) > 1:
+        wd = sys.argv[1]
+    main(wd)
