@@ -30,7 +30,7 @@ class Encoder(object):
             source_bits = (automaton_onestate_bits if state != "^" else 0.0)
             if len(automaton.m[state].items()) == 1:
                 target_bits = (automaton_onestate_bits
-                               if automaton.m[state].items()[0]!= "$"
+                               if automaton.m[state].items()[0][0]!= "$"
                                else 0.0)
                 automaton_trans_bits += (source_bits + target_bits)
                 logging.debug("Only one transition from here, bits={0}".format(
@@ -41,9 +41,12 @@ class Encoder(object):
                 # we only need target state and string and probs
                 target_bits = (automaton_onestate_bits if target != "$" else 0.0)
 
-                actual_edge_bits = (edge_bits if q.representer(prob) != q.representer(q.neg_cutoff) else 1.0)
+                if q.representer(prob) != q.representer(q.neg_cutoff):
+                    automaton_trans_bits += (source_bits + edge_bits + target_bits)
+                else:
+                    # we don't wanna encode those transitions at all
+                    pass
 
-                automaton_trans_bits += (source_bits + actual_edge_bits + target_bits)
         return automaton_emission_bits, automaton_trans_bits
 
     def encode(self, automaton, corpus, reverse=False):
