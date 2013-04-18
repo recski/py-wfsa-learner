@@ -157,8 +157,10 @@ class LogLinQuantizer(LinearQuantizer):
 
         useful_codes = 2 ** bits
 
-        self.rep_to_code[self.neg_cutoff] = 0
-        self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = self.neg_cutoff
+        #self.rep_to_code[self.neg_cutoff] = 0
+        #self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = self.neg_cutoff
+        self.rep_to_code[float("-inf")] = 0
+        self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = float("-inf")
         useful_codes -= 1
 
         if self.pos_cutoff != 0:
@@ -183,7 +185,8 @@ class LogLinQuantizer(LinearQuantizer):
 
         # if less than anything, return lowest representer
         if number <= self.neg_cutoff:
-            return self.neg_cutoff
+            #return self.neg_cutoff
+            return float("-inf")
         # if more than anything, return highest representer
         elif self.pos_cutoff != 0 and number > self.pos_cutoff:
             return self.pos_cutoff
