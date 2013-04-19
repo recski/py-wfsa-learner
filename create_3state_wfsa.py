@@ -110,6 +110,15 @@ def create_new_three_state_fsa(corpus):
         #whether we allowed suffixes to follow the start state or not
         fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
         fsa.m[suffix+'_2']['$'] = 0.0
+
+    # HACK
+    #for prefix, _ in prefixes.iteritems():
+        #for suffix, _ in suffixes.iteritems():
+            #state_name = "".join(prefix) + "".join(suffix) + "_3"
+            #fsa.m["^"][state_name] = 0.0
+            #fsa.m[state_name]["$"] = 0.0
+            #fsa.emissions[state_name] = (prefix,suffix)
+            #fsa.m_emittors[(prefix,suffix)].add(state_name)
     
     return fsa
 
