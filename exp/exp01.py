@@ -15,17 +15,16 @@ from corpus import read_corpus, normalize_corpus
 from create_baseline_automaton import create_word_wfsa
 from create_3state_wfsa import create_new_three_state_fsa
 from quantizer import LogLinQuantizer
-from copy import copy
+from copy import deepcopy as copy
 from encoder import Encoder
 from learner import Learner
 from automaton import Automaton
 
 def generate_quantizers():
-    for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
-        for cutoff in [-4,-5,-6,-7,-8,-9,-10]:
-        #for cutoff in [-11, -13, -15, -17, -20, -24, -28, -32]:
-    #for bits in [4, 8]:#, 8]:
-        #for cutoff in [-11]:#, -6]:
+    #for bits in [4, 5, 6, 7, 8, 10, 12, 16]:
+        #for cutoff in [-4,-5,-6,-7,-8,-9,-10, -12, -14, -16, -20, -24, -28, -32]:
+    for bits in [10, 12]:
+        for cutoff in [-20, -24, -28, -32]:
             quantizer = LogLinQuantizer(bits, cutoff)
             yield quantizer
 
@@ -47,17 +46,17 @@ def create_wfsas(unigram_corpus, morpheme_corpus):
     return baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa
 
 def learn_wfsa(wfsa, corpus, distfp=None):
-    wfsa = copy(wfsa)
-    wfsa.round_and_normalize()
+    wfsa_ = copy(wfsa)
+    wfsa_.round_and_normalize()
     if distfp is not None:
-        learner = Learner(wfsa, corpus, pref_prob=0.0,
+        learner = Learner(wfsa_, corpus, pref_prob=0.0,
             distfp=distfp, turns_for_each=50, factor=0.8,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
-    return wfsa
+    return wfsa_
 
 def encode_wfsa(wfsa, corpus, encoder):
-    return encoder.encode(wfsa, corpus)
+    return encoder.encode(copy(wfsa), corpus)
 
 def run(args):
     (quantizer, wd, unigram_corpus, morpheme_corpus, unigram_wfsa,
@@ -74,14 +73,14 @@ def run(args):
                                           quantizer.neg_cutoff))
     res += [quantizer.bits, quantizer.neg_cutoff]
 
-    uni_bits_a, uni_bits_e, uni_bits_t, uni_err = encode_wfsa(
-        unigram_wfsa, unigram_corpus, unigram_encoder)
-    res += [uni_bits_a, uni_bits_e, uni_bits_t, uni_err]
-
-    morph_bits_a, morph_bits_e, morph_bits_t, morph_err = encode_wfsa(
-        morpheme_wfsa, morpheme_corpus, morpheme_encoder)
-    res += [morph_bits_a, morph_bits_e, morph_bits_t, morph_err]
-
+    #uni_bits_a, uni_bits_e, uni_bits_t, uni_err = encode_wfsa(
+        #unigram_wfsa, unigram_corpus, unigram_encoder)
+    #res += [uni_bits_a, uni_bits_e, uni_bits_t, uni_err]
+#
+    #morph_bits_a, morph_bits_e, morph_bits_t, morph_err = encode_wfsa(
+        #morpheme_wfsa, morpheme_corpus, morpheme_encoder)
+    #res += [morph_bits_a, morph_bits_e, morph_bits_t, morph_err]
+#
     for distfp in ["kullback", "l1err", "squarerr"]:
         learnt_wfsa_filename = "{0}/{1}".format(wd,
             "learnt_{0}_{1}_{2}.wfsa".format(quantizer.bits,
@@ -112,11 +111,12 @@ def main(wd):
         baseline_unigram_wfsa, baseline_morpheme_wfsa, three_states_wfsa,
         unigram_encoder, morpheme_encoder)
 
-    pool = Pool(processes=7)
+    pool = Pool(processes=6)
     quantizers = list(generate_quantizers())
     res = pool.map(run, [(q,wd,) + arguments for q in quantizers])
     for r in res:
-        print "\t".join((str(_) for _ in r))
+        r = [("{0:4.5}".format(_) if type(_) == float else str(_)) for _ in r]
+        print "\t".join(r)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
