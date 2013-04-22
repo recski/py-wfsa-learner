@@ -100,6 +100,7 @@ class Exp(object):
             # create and learn new automaton
             wfsa = create_new_three_state_fsa(self.morpheme_corpus,
                                               harant, emissions)
+            wfsa.finalize()
             wfsa.quantizer = quantizer
             wfsa.round_and_normalize()
             corpus = (self.morpheme_corpus if emissions == "m" else
