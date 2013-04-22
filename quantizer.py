@@ -157,8 +157,8 @@ class LogLinQuantizer(LinearQuantizer):
 
         useful_codes = 2 ** bits
 
-        last_rep = float("-inf")
-        #last_rep = 2 * neg_cutoff
+        #last_rep = float("-inf")
+        last_rep = 2 * neg_cutoff
         self.rep_to_code[last_rep] = 0
         self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = last_rep
         useful_codes -= 1
