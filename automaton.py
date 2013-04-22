@@ -325,7 +325,8 @@ class Automaton(object):
     def l1err(p1, p2):
         return abs(p1 - p2)
 
-    def distance_from_corpus(self, corpus, distfp, reverse=False):
+    def distance_from_corpus(self, corpus, distfp, reverse=False,
+                             distances={}):
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, corpus_p in corpus.iteritems():
@@ -333,8 +334,10 @@ class Automaton(object):
                 modeled_p = math.exp(probs[item])
                 if modeled_p == 0.0:
                     modeled_p = 1e-50
-                distance += (distfp(corpus_p, modeled_p) if not reverse
+                dist = (distfp(corpus_p, modeled_p) if not reverse
                              else distfp(modeled_p, corpus_p))
+                distance += dist
+                distances[item] = dist
         return distance
 
     def round_and_normalize_state(self, state):
