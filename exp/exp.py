@@ -81,7 +81,7 @@ class Exp(object):
         exp_name = "{0}-{1}-{2}-{3}-{4}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
-            harant,
+            "_".join(("@".join(h) if type(h) == tuple else h) for h in harant),
             emissions,
             distance[0])
 
@@ -89,6 +89,9 @@ class Exp(object):
 
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
             "learnt_{0}.wfsa".format(exp_name))
+
+        corpus = (self.morpheme_corpus if emissions == "m" else
+                  self.unigram_corpus)
 
         # read Automaton or learn it and dump it finally
         if os.path.exists(learnt_wfsa_filename):
@@ -103,8 +106,6 @@ class Exp(object):
             wfsa.finalize()
             wfsa.quantizer = quantizer
             wfsa.round_and_normalize()
-            corpus = (self.morpheme_corpus if emissions == "m" else
-                      self.unigram_corpus)
             learnt_wfsa = learn_wfsa(wfsa, corpus, distance)
 
             # dump
@@ -115,7 +116,7 @@ class Exp(object):
         encoder = (self.morpheme_encoder if emissions=="m" else
                    self.unigram_encoder)
         bits_a, bits_e, bits_t, err = encode_wfsa(
-            learnt_wfsa, self.morpheme_corpus, encoder)
+            learnt_wfsa, corpus, encoder)
 
         return [exp_name, bits_a, bits_e, bits_t, err]
 
@@ -124,6 +125,6 @@ def run_exp(args):
 
     if type_ == "l":
         return exp.run_list_exp(quantizer, emission)
-    elif type_ in ["3", "h", "a"]:
+    elif type_ in ["3", "a"] or type(type_) == list:
         return exp.run_learn_exp(quantizer, distance, type_, emission)
 

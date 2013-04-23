@@ -43,6 +43,8 @@ class Encoder(object):
 
                 if q.representer(prob) != q.representer(q.neg_cutoff):
                     automaton_trans_bits += (source_bits + edge_bits + target_bits)
+                    logging.debug("transition is encoded in {0} bits({1}-{2}-{3})".format(
+                        source_bits + edge_bits + target_bits, source_bits, edge_bits, target_bits))
                 else:
                     # we don't wanna encode those transitions at all
                     pass

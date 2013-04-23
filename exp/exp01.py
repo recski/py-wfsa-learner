@@ -16,12 +16,12 @@ def main(wd):
 
     exp = Exp(corpus_fn, wd)
 
-    pool = Pool(processes=6)
-    bits = [6, 7, 8, 9, 10, 11, 12, 16]
-    cutoffs = [-16, -20, -24, -28, -32]
+    pool = Pool(processes=1)
+    bits = [6, 7, 8, 9, 10, 11, 12, 14, 16]
+    cutoffs = [-20]
     distances = ["kullback"]
-    emissions = ["m"]
-    type_ = ["l", "3", "h", "a"]
+    emissions = ["c", "m"]
+    type_ = ["l", "3", [["hogy"], "a"]]
     options = list(generate_options(bits, cutoffs, distances, emissions, type_))
     res = pool.map(run_exp, [(exp,) + o for o in options])
     for r in res:
