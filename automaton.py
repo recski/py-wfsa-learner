@@ -388,9 +388,10 @@ class Automaton(object):
                           "but {0}".format(s_sum))
 
     def dump(self, f):
-        emit_bits, trans_bits = self.encoder.automaton_bits(self)
-        total_bits = emit_bits + trans_bits
-        f.write("total bits: {0} ({1} transition bits, {2} emission bits)\n".format(total_bits, emit_bits, trans_bits))
+        if self.quantizer is not None:
+            emit_bits, trans_bits = self.encoder.automaton_bits(self)
+            total_bits = emit_bits + trans_bits
+            f.write("total bits: {0} ({1} transition bits, {2} emission bits)\n".format(total_bits, emit_bits, trans_bits))
         states = sorted(self.m.keys())
         for s1 in states:
             for s2 in states + ['$']:
