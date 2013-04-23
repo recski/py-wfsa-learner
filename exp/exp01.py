@@ -21,8 +21,10 @@ def main(wd):
     cutoffs = [-20]
     distances = ["kullback"]
     emissions = ["c", "m"]
-    type_ = ["l", "3", [["hogy"], "a"]]
-    options = list(generate_options(bits, cutoffs, distances, emissions, type_))
+    type_ = ["l", "3", ["hogy"], "a"]
+    state_bits = ["u", "e"]
+    options = list(generate_options(bits, cutoffs, distances, emissions, type_,
+                                    state_bits))
     res = pool.map(run_exp, [(exp,) + o for o in options])
     for r in res:
         r = [("{0:4.5}".format(_) if type(_) == float else str(_)) for _ in r]
