@@ -39,7 +39,7 @@ def learn_wfsa(wfsa, corpus, distfp=None):
     wfsa_.round_and_normalize()
     if distfp is not None:
         learner = Learner(wfsa_, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=200, factor=0.8,
+            distfp=distfp, turns_for_each=50, factor=0.8,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
     return wfsa_
@@ -57,11 +57,11 @@ class Exp(object):
         self.morpheme_encoder = Encoder(3.1196)
 
     def run_list_exp(self, quantizer, emission, state_bits):
-        exp_name = "{0}-{1}-l-{2}-{3}".format(
+        aut_name = "{0}-{1}-l-{2}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
-            emission,
-            state_bits)
+            emission)
+        exp_name = "{0}-{1}".format(aut_name, state_bits)
 
         logging.info("Running {0}".format(exp_name))
 
@@ -82,18 +82,18 @@ class Exp(object):
 
     def run_3state_exp(self, quantizer, distance, harant, emissions,
                        state_bits):
-        exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
+        aut_name = "{0}-{1}-{2}-{3}-{4}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
             "_".join(("@".join(h) if type(h) == tuple else h) for h in harant),
             emissions,
-            distance[0],
-            state_bits)
+            distance[0])
+        exp_name = "{0}-{1}".format(aut_name, state_bits)
 
         logging.info("Running {0}".format(exp_name))
 
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
-            "learnt_{0}.wfsa".format(exp_name))
+            "learnt_{0}.wfsa".format(aut_name))
 
         corpus = (self.morpheme_corpus if emissions == "m" else
                   self.unigram_corpus)
