@@ -91,7 +91,6 @@ class Learner(object):
         end = self.end_temperature
         tempq = self.temp_quotient
         turns_for_each_temp = self.turns_for_each
-
         energy = compute_energy()
         turn_count = 0
         prev = None

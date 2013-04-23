@@ -1,16 +1,37 @@
 import math
 import logging
+from collections import defaultdict
 
 from automaton import Automaton
 
+def compute_state_entropy(automaton, which):
+    counts = defaultdict(int)
+    for src in automaton.m:
+        for tgt in automaton.m[src]:
+            if which == "src":
+                counts[src] += 1
+            elif which == "tgt":
+                counts[tgt] += 1
+
+    total = float(sum(counts.itervalues()))
+    return sum(-c/total * math.log(c/total) for c in counts.itervalues())
+
 class Encoder(object):
     """Class that encodes automata with given coding"""
-    def __init__(self, entropy):
+    def __init__(self, entropy, state_bits="u"):
         self.entropy = entropy
+        self.state_bits = state_bits
 
     def automaton_bits(self, automaton):
         automaton.round_and_normalize()
         automaton_onestate_bits = math.log(len(automaton.m), 2)
+        if self.state_bits == "u":
+            source_onestate_bits = automaton_onestate_bits
+            target_onestate_bits = automaton_onestate_bits
+        elif self.state_bits == "e":
+            source_onestate_bits = compute_state_entropy(automaton, "src")
+            target_onestate_bits = compute_state_entropy(automaton, "tgt")
+
         automaton_emission_bits = 0.0
         automaton_trans_bits = 0.0
         q = automaton.quantizer
@@ -27,11 +48,19 @@ class Encoder(object):
             logging.debug("Emit bits={0}".format(s_bits))
 
             # bits for transition
-            source_bits = (automaton_onestate_bits if state != "^" else 0.0)
+            source_bits = (source_onestate_bits if state != "^" else 0.0)
             if len(automaton.m[state].items()) == 1:
-                target_bits = (automaton_onestate_bits
+                target_bits = (target_onestate_bits
                                if automaton.m[state].items()[0][0]!= "$"
                                else 0.0)
+
+                # if target is $, and only one transition, we won't encode
+                # the source, because we assume that there are no trimmed
+                # states
+                source_bits = (source_bits
+                               if automaton.m[state].items()[0][0]!= "$"
+                               else 0.0)
+
                 automaton_trans_bits += (source_bits + target_bits)
                 logging.debug("Only one transition from here, bits={0}".format(
                     source_bits + target_bits))
@@ -39,7 +68,7 @@ class Encoder(object):
 
             for target, prob in automaton.m[state].iteritems():
                 # we only need target state and string and probs
-                target_bits = (automaton_onestate_bits if target != "$" else 0.0)
+                target_bits = (target_onestate_bits if target != "$" else 0.0)
 
                 if q.representer(prob) != q.representer(q.neg_cutoff):
                     automaton_trans_bits += (source_bits + edge_bits + target_bits)

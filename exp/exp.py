@@ -18,12 +18,13 @@ def generate_quantizers(bits, cutoffs):
             quantizer = LogLinQuantizer(bits, cutoff)
             yield quantizer
 
-def generate_options(bits, cutoffs, distances, emissions, type_):
+def generate_options(bits, cutoffs, distances, emissions, type_, state_bits):
     for q in generate_quantizers(bits, cutoffs):
         for d in distances:
             for e in emissions:
                 for t in type_:
-                    yield q, d, e, t
+                    for s in state_bits:
+                        yield q, d, e, t, s
 
 def create_corpora(corpus_fn):
     unigram_corpus = read_corpus(open(corpus_fn), skip=["#"])
@@ -55,11 +56,12 @@ class Exp(object):
         self.unigram_encoder = Encoder(4.7872)
         self.morpheme_encoder = Encoder(3.1196)
 
-    def run_list_exp(self, quantizer, emission):
-        exp_name = "{0}-{1}-l-{2}".format(
+    def run_list_exp(self, quantizer, emission, state_bits):
+        aut_name = "{0}-{1}-l-{2}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
             emission)
+        exp_name = "{0}-{1}".format(aut_name, state_bits)
 
         logging.info("Running {0}".format(exp_name))
 
@@ -72,23 +74,26 @@ class Exp(object):
         wfsa = create_word_wfsa(corpus)
         wfsa.finalize()
         wfsa.quantizer = quantizer
+        encoder.state_bits = state_bits
         bits_a, bits_e, bits_t, err = encode_wfsa(wfsa, corpus, encoder)
 
         res = [exp_name, bits_a, bits_e, bits_t, err]
         return res
 
-    def run_learn_exp(self, quantizer, distance, harant, emissions):
-        exp_name = "{0}-{1}-{2}-{3}-{4}".format(
+    def run_3state_exp(self, quantizer, distance, harant, emissions,
+                       state_bits):
+        aut_name = "{0}-{1}-{2}-{3}-{4}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
             "_".join(("@".join(h) if type(h) == tuple else h) for h in harant),
             emissions,
             distance[0])
+        exp_name = "{0}-{1}".format(aut_name, state_bits)
 
         logging.info("Running {0}".format(exp_name))
 
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
-            "learnt_{0}.wfsa".format(exp_name))
+            "learnt_{0}.wfsa".format(aut_name))
 
         corpus = (self.morpheme_corpus if emissions == "m" else
                   self.unigram_corpus)
@@ -115,6 +120,7 @@ class Exp(object):
         # encode automaton
         encoder = (self.morpheme_encoder if emissions=="m" else
                    self.unigram_encoder)
+        encoder.state_bits = state_bits
         bits_a, bits_e, bits_t, err = encode_wfsa(
             learnt_wfsa, corpus, encoder)
 
@@ -165,11 +171,14 @@ class Exp(object):
         return [exp_name, bits_a, bits_e, bits_t, err]
 
 def run_exp(args):
-    (exp, quantizer, distance, emission, type_) = args
+    (exp, quantizer, distance, emission, type_, state_bits) = args
 
     if type_ == "l":
-        return exp.run_list_exp(quantizer, emission)
+        return exp.run_list_exp(quantizer, emission, state_bits)
     elif type_ in ["3", "a"] or type(type_) == list:
-        return exp.run_learn_exp(quantizer, distance, type_, emission)
+        return exp.run_3state_exp(quantizer, distance, type_, emission,
+                                 state_bits)
     elif type_ == "m":
         return exp.run_alphabet_exp(quantizer, distance, emission)
+
+
