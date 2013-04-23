@@ -82,16 +82,29 @@ def create_three_state_fsa(corpus):
     
     return fsa
 
-def create_new_three_state_fsa(corpus):
-    """This fsa will not make use of an "O" state and will have edges from the start state to all word-final morphemes"""
+def create_new_three_state_fsa(corpus, harant="a", emissions="m"):
+    """This fsa will not make use of an "O" state and will have edges from
+    the start state to all word-final morphemes
+    @harant - transitions to the second level
+      - "a": for all suffix morphemes
+      - "h": for "hogy" suffix morpheme
+      - else: No transitions here
+    @emissions - morpheme or character emissions
+      - "m": morpheme
+      - "c": character
+    """
     prefixes, suffixes = get_morpheme_frequencies(corpus)    
     fsa = Automaton()
     morphemes_with_index = zip(len(prefixes) * [0], prefixes.keys())
     morphemes_with_index += zip(len(suffixes) * [2], suffixes.keys())
     for index, morpheme in morphemes_with_index:
         state = "{0}_{1}".format(morpheme, index)
-        fsa.emissions[state] = (morpheme,)
-        fsa.m_emittors[morpheme].add(state)
+        if emissions == "m":
+            fsa.emissions[state] = (morpheme,)
+            fsa.m_emittors[morpheme].add(state)
+        elif emissions == "c":
+            fsa.emissions[state] = tuple(morpheme)
+            fsa.m_emittors[tuple(morpheme)].add(state)
 
     total_suffix_freq = sum(suffixes.values())*0.5
     total_prefix_freq = sum(prefixes.values())+total_suffix_freq
@@ -101,6 +114,8 @@ def create_new_three_state_fsa(corpus):
     for prefix, p_freq in prefixes.iteritems(): 
         fsa.m['^'][prefix+'_0'] = math.log(p_freq/total_prefix_freq)
         fsa.m[prefix+'_0']['EPSILON_1'] = 0.0
+    fsa.m['^']['EPSILON_0'] = -5.0
+    fsa.m['EPSILON_0']['EPSILON_1'] = 0.0
     
     for suffix, s_freq in suffixes.iteritems():
         fsa.m['EPSILON_1'][suffix+'_2'] = math.log(
@@ -108,8 +123,20 @@ def create_new_three_state_fsa(corpus):
         #the two 0.5s cancel each other out, which reflects that once
         #we got as far as the epsilon state, it doesn't matter anymore
         #whether we allowed suffixes to follow the start state or not
-        fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
+        if harant == "a":
+            fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
+        elif harant == "h" and suffix == "hogy":
+            fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
         fsa.m[suffix+'_2']['$'] = 0.0
+
+    # HACK
+    #for prefix, _ in prefixes.iteritems():
+        #for suffix, _ in suffixes.iteritems():
+            #state_name = "".join(prefix) + "".join(suffix) + "_3"
+            #fsa.m["^"][state_name] = 0.0
+            #fsa.m[state_name]["$"] = 0.0
+            #fsa.emissions[state_name] = (prefix,suffix)
+            #fsa.m_emittors[(prefix,suffix)].add(state_name)
     
     return fsa
 
@@ -126,7 +153,7 @@ def main():
     elif fsa_type == 'o':
         fsa_creator = lambda corpus: create_o_fsa(corpus)
     elif fsa_type == 'new':
-        fsa_creator = lambda corpus: create_new_three_state_fsa(corpus)
+        fsa_creator = lambda corpus: create_new_three_state_fsa(corpus, "h", "c")
     else:
         logging.critical('unknown fsa type: {0}'.format(fsa_type))
         sys.exit(-1)

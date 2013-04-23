@@ -10,7 +10,7 @@ class CorpusError(Exception):
 # Number of fields allowed in readCorpus
 __FIELD_RANGE = (1, 2)
 
-def read_corpus(stream, separator=None, silent=False):
+def read_corpus(stream, separator=None, silent=False, skip=None):
     """
     Reads the corpus from stream and returns it. The corpus is a
     {word: frequency} (???) map.
@@ -18,8 +18,13 @@ def read_corpus(stream, separator=None, silent=False):
     @param separator the letter separator
     @param silent if @c True, invalid lines are silently dropped; otherwise,
                   a CorpusException is thrown.
+    @param skip: skip characters/strings that will be omitted
     """
     # TEST
+
+    if skip is None:
+        skip = []
+    skip = set(skip)
     corpus = defaultdict(float)
     line_no = -1
     for l in stream:
@@ -38,7 +43,7 @@ def read_corpus(stream, separator=None, silent=False):
         if separator is not None and len(separator) > 0:
             key = key.split(separator)
         key = tuple((symbol if len(symbol) > 0 else "EPSILON")
-                    for symbol in key)
+                    for symbol in key if symbol not in skip)
         if len(a)==1:
             corpus[key] += 1
         else :

@@ -230,12 +230,6 @@ class Automaton(object):
         It will emit the next symbol following 'string'.
         """
         
-        if len(string)==0 :
-            if not Automaton.is_epsilon_state(state) and self.m["^"].has_key(state):
-                memo[string][state] = self.m["^"][state]
-            return
-
-
         total = Automaton.m_inf
         # compute real emissions
         for previousState in self.emissions:
@@ -250,12 +244,12 @@ class Automaton(object):
                 except KeyError:
                     soFar = Automaton.m_inf
                 total = max(soFar, total)
-                #total = math.log(math.exp(soFar) + math.exp(total))
 
         # check the case of epsilon emission
-        if (not Automaton.nonemitting(state)
-            and "EPSILON" in self.m_emittors):
-            for epsilonState in self.emittors("EPSILON"):
+        if (not Automaton.nonemitting(state)):
+            for epsilonState in self.m.keys():
+                if not Automaton.nonemitting(epsilonState):
+                    continue
                 # we already have this value because epsilon states
                 # came first
 
@@ -266,7 +260,6 @@ class Automaton(object):
                 soFar = memo[string][epsilonState]
                 soFar += self.m[epsilonState][state]
                 total = max(soFar, total)
-                #total = math.log(math.exp(soFar) + math.exp(total))
         memo[string][state] = total
 
     def update_probability_of_string(self, string, memo) :
@@ -285,20 +278,40 @@ class Automaton(object):
         """
         Expects a list of strings.
         Outputs a map from those strings to probabilities.
-        This can then be aggregated somewhere else.
-        The trick is that it uses memoization
-        to reuse results for shorter strings. 
         """ 
         topsorted = closure_and_top_sort(strings)
+        # remove empty string
+        topsorted = topsorted[1:]
 
-        # memo[string][state] = probabilityOfState(self,string,state)
-        memo = defaultdict(lambda: defaultdict(lambda: Automaton.m_inf))
+        memo = self.init_memo()
         output = {}
 
         for string in topsorted :
             self.update_probability_of_string(string, memo)
             output[string] = memo[string]["$"]
         return output
+
+    def init_memo(self):
+        memo = defaultdict(lambda: defaultdict(lambda: Automaton.m_inf))
+        epsilon_reachables = set(["^"])
+        while True:
+            targets = set()
+            for state in epsilon_reachables:
+                for target in self.m[state]:
+                    if target in epsilon_reachables:
+                        continue
+
+                    if Automaton.is_epsilon_state(target):
+                        targets.add(target)
+                        # start is not memoized
+                    memo[()][target] = self.m[state][target]
+                    if state != "^":
+                        memo[()][target] += memo[()][state]
+            epsilon_reachables |= targets
+            if len(targets) == 0:
+                break
+    
+        return memo
 
     @staticmethod
     def kullback(p1, p2):
@@ -314,16 +327,19 @@ class Automaton(object):
     def l1err(p1, p2):
         return abs(p1 - p2)
 
-    def distance_from_corpus(self, corpus, distfp, reverse=False):
+    def distance_from_corpus(self, corpus, distfp, reverse=False,
+                             distances={}):
         distance = 0.0
         probs = self.probability_of_strings(list(corpus.keys()))
         for item, corpus_p in corpus.iteritems():
             if corpus_p > 0.0:
                 modeled_p = math.exp(probs[item])
                 if modeled_p == 0.0:
-                    modeled_p = Automaton.eps
-                distance += (distfp(corpus_p, modeled_p) if not reverse
+                    modeled_p = 1e-50
+                dist = (distfp(corpus_p, modeled_p) if not reverse
                              else distfp(modeled_p, corpus_p))
+                distance += dist
+                distances[item] = dist
         return distance
 
     def round_and_normalize_state(self, state):
