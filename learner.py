@@ -141,9 +141,6 @@ class Learner(object):
         option_randomizer = lambda: self.randomize_automaton_change()
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
-        mdl_, aut_size, err = mdl(self.automaton, self.corpus,
-                                  self.automaton.quantizer.bits)
-        return mdl_, aut_size, err
 
 def optparser():
     parser = OptionParser()
