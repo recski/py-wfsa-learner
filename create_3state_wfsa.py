@@ -87,7 +87,7 @@ def create_new_three_state_fsa(corpus, harant="a", emissions="m"):
     the start state to all word-final morphemes
     @harant - transitions to the second level
       - "a": for all suffix morphemes
-      - "h": for "hogy" suffix morpheme
+      - list: morphemes and morpheme igrams that will be harant'ed
       - else: No transitions here
     @emissions - morpheme or character emissions
       - "m": morpheme
@@ -125,18 +125,18 @@ def create_new_three_state_fsa(corpus, harant="a", emissions="m"):
         #whether we allowed suffixes to follow the start state or not
         if harant == "a":
             fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
-        elif harant == "h" and suffix == "hogy":
+        elif type(harant) == list and suffix in harant:
             fsa.m['^'][suffix+'_2'] = math.log((0.5*s_freq)/total_prefix_freq)
         fsa.m[suffix+'_2']['$'] = 0.0
 
-    # HACK
-    #for prefix, _ in prefixes.iteritems():
-        #for suffix, _ in suffixes.iteritems():
-            #state_name = "".join(prefix) + "".join(suffix) + "_3"
-            #fsa.m["^"][state_name] = 0.0
-            #fsa.m[state_name]["$"] = 0.0
-            #fsa.emissions[state_name] = (prefix,suffix)
-            #fsa.m_emittors[(prefix,suffix)].add(state_name)
+    for prefix, _ in prefixes.iteritems():
+        for suffix, _ in suffixes.iteritems():
+            if type(harant) == list and (prefix, suffix) in harant:
+                state_name = "".join(prefix) + "".join(suffix) + "_3"
+                fsa.m["^"][state_name] = -20.0
+                fsa.m[state_name]["$"] = 0.0
+                fsa.emissions[state_name] = (prefix,suffix)
+                fsa.m_emittors[(prefix,suffix)].add(state_name)
     
     return fsa
 
@@ -153,7 +153,7 @@ def main():
     elif fsa_type == 'o':
         fsa_creator = lambda corpus: create_o_fsa(corpus)
     elif fsa_type == 'new':
-        fsa_creator = lambda corpus: create_new_three_state_fsa(corpus, "h", "c")
+        fsa_creator = lambda corpus: create_new_three_state_fsa(corpus, ["hogy", ("vala", "ki")], "m")
     else:
         logging.critical('unknown fsa type: {0}'.format(fsa_type))
         sys.exit(-1)
