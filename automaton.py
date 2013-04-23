@@ -83,7 +83,7 @@ class Automaton(object):
         is_degenerate = True
         for letter in alphabet:
             for index in xrange(alphabet[letter]):
-                state = letter + "_" + str(index)
+                state = "".join(letter) + "_" + str(index)
                 automaton.emissions[state] = letter
                 automaton.m_emittors[letter].add(state)
                 if is_degenerate and not Automaton.is_epsilon_state(state):
@@ -166,11 +166,7 @@ class Automaton(object):
         alphabet = set()
         total = float(sum(corpus.itervalues()))
         for item, cnt in corpus.iteritems() :
-            if type(item) == str:
-                item = '^' + item + '$'
-            else:
-                # items are tuples e.g. letter are multichar strs
-                item = ('^',) + item + ('$',)
+            item = ('^',) + item + ('$',)
             for i in range(len(item) - 1) :
                 alphabet.add(item[i])
                 alphabet.add(item[i+1])
