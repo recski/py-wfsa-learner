@@ -76,7 +76,7 @@ def get_alphabet(corpus):
     alphabet = defaultdict(int)
     for w in corpus.keys():
         for c in w:
-            alphabet[c] += 1
+            alphabet[(c,)] += 1
     return alphabet
 
 def normalize_corpus(corpus):
