@@ -225,27 +225,33 @@ class Automaton(object):
         'state' did not emit yet:
         It will emit the next symbol following 'string'.
         """
-        
         total = Automaton.m_inf
         # compute real emissions
         for previousState in self.emissions:
+
+            # stop if no transitions to state
+            if not state in self.m[previousState]:
+                continue
+
             state_emit = self.emissions[previousState]
             state_emit_l = len(state_emit)
-            if state_emit == string[-state_emit_l:]:
 
+            if state_emit == string[-state_emit_l:]:
                 head = string[:-state_emit_l]
-                soFar = memo[head][previousState]
-                try:
+
+                soFar = Automaton.m_inf
+                if previousState in memo[head]:
+                    soFar = memo[head][previousState]
                     soFar += self.m[previousState][state]
-                except KeyError:
-                    soFar = Automaton.m_inf
                 total = max(soFar, total)
 
         # check the case of epsilon emission
-        if (not Automaton.nonemitting(state)):
+        #if (not Automaton.nonemitting(state)):
+        if True:
             for epsilonState in self.m.keys():
                 if not Automaton.nonemitting(epsilonState):
                     continue
+
                 # we already have this value because epsilon states
                 # came first
 
@@ -253,9 +259,16 @@ class Automaton(object):
                 if not state in self.m[epsilonState]:
                     continue
 
+                if not string in memo or not epsilonState in memo[string]:
+                    continue
+
                 soFar = memo[string][epsilonState]
                 soFar += self.m[epsilonState][state]
                 total = max(soFar, total)
+
+        if string not in memo:
+            memo[string] = {}
+
         memo[string][state] = total
 
     def update_probability_of_string(self, string, memo) :
@@ -288,7 +301,7 @@ class Automaton(object):
         return output
 
     def init_memo(self):
-        memo = defaultdict(lambda: defaultdict(lambda: Automaton.m_inf))
+        memo = {(): {}}
         epsilon_reachables = set(["^"])
         while True:
             targets = set()
@@ -300,13 +313,20 @@ class Automaton(object):
                     if Automaton.is_epsilon_state(target):
                         targets.add(target)
                         # start is not memoized
-                    memo[()][target] = self.m[state][target]
+
+                    so_far = Automaton.m_inf
+                    if target in memo[()]:
+                        so_far = memo[()][target]
+                    
+                    prob_this_way = self.m[state][target]
                     if state != "^":
-                        memo[()][target] += memo[()][state]
+                        prob_this_way += memo[()][state]
+
+                    memo[()][target] = max(so_far, prob_this_way)
             epsilon_reachables |= targets
             if len(targets) == 0:
                 break
-    
+
         return memo
 
     @staticmethod
@@ -332,6 +352,7 @@ class Automaton(object):
                 modeled_p = math.exp(probs[item])
                 if modeled_p == 0.0:
                     modeled_p = 1e-50
+
                 dist = (distfp(corpus_p, modeled_p) if not reverse
                              else distfp(modeled_p, corpus_p))
                 distance += dist
@@ -401,6 +422,26 @@ class Automaton(object):
         for s1, em in self.emissions.iteritems():
             f.write("{0}: {1}\n".format(s1, repr(em).replace(" ", "")))
     
+    def split_state(self, state, new_state, ratio):
+        hub_in = 'EPSILON_{0}_{1}_in'.format(state, new_state)
+        hub_out = 'EPSILON_{0}_{1}_out'.format(state, new_state)
+        self.m[hub_in] = {state+'_0':math.log(1-ratio), new_state+'_0':math.log(ratio)}
+        self.m[hub_out] = {}
+        self.emissions[new_state+'_0'] = (new_state,)
+        self.m_emittors[(new_state,)] = set([new_state+'_0'])
+        for s1, trs in self.m.items():
+            if s1 in (hub_in, hub_out):
+                continue
+            for s2, p in trs.items():
+                if s2.startswith(state):
+                    self.m[s1][hub_in] = p
+                    self.m[s1][s2] = float('-inf')
+        for s2, p in self.m[state+'_0'].items():
+            self.m[hub_out][s2] = p
+        
+        self.m[state+'_0'] = {hub_out:0.0}    
+        self.m[new_state+'_0'] = {hub_out:0.0}
+
 def optparser():
     parser = OptionParser()
     parser.add_option("-e", "--emitfile",dest="emitfile", type="str",
