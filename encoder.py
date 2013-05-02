@@ -1,8 +1,11 @@
+import sys
 import math
 import logging
 from collections import defaultdict
 
 from automaton import Automaton
+from corpus import read_corpus, normalize_corpus
+from quantizer import LogLinQuantizer
 
 def compute_state_entropy(automaton, which):
     counts = defaultdict(int)
@@ -41,9 +44,9 @@ class Encoder(object):
 
             # bits for emission
             s_len = (len(automaton.emissions[state])
-                     if not (state.startswith("EPSILON")or state in ["$", "^"])
-                     else 1)
-            s_bits = (0.0 if state == "$" else self.entropy * s_len)
+                     if not (state.startswith("EPSILON") or state == "^")
+                     else 0)
+            s_bits = self.entropy * s_len
             automaton_emission_bits += s_bits
             logging.debug("Emit bits={0}".format(s_bits))
 
@@ -86,4 +89,22 @@ class Encoder(object):
         err_bits = automaton.distance_from_corpus(corpus,
                        Automaton.kullback, reverse)
         return automaton_bits, emit_bits, trans_bits, err_bits
+
+def main():
+    automaton = Automaton.create_from_dump(sys.argv[1])
+    corpus = read_corpus(open(sys.argv[2]))
+    normalize_corpus(corpus)
+    entropy = float(sys.argv[3])
+    string_bits = "u"
+    if len(sys.argv) > 4:
+        string_bits = sys.argv[4]
+    q = LogLinQuantizer(10, -20)
+    automaton.quantizer = q
+
+    encoder = Encoder(entropy, string_bits)
+    print encoder.encode(automaton, corpus)
+
+if __name__ == "__main__":
+    main()
+
 
