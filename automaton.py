@@ -240,7 +240,7 @@ class Automaton(object):
                 head = string[:-state_emit_l]
 
                 soFar = Automaton.m_inf
-                if previousState in memo[head]:
+                if head in memo and previousState in memo[head]:
                     soFar = memo[head][previousState]
                     soFar += self.m[previousState][state]
                 total = max(soFar, total)
@@ -441,6 +441,29 @@ class Automaton(object):
         
         self.m[state+'_0'] = {hub_out:0.0}    
         self.m[new_state+'_0'] = {hub_out:0.0}
+
+    def language(self, remaining=1e-3):
+        generated_mass = 0.0
+
+        emits = set(self.emissions.itervalues())
+        memo = self.init_memo()
+        while generated_mass < 1.0 - remaining:
+            for word in memo.keys():
+                for emit in emits:
+                    new_word = word + emit
+                    self.update_probability_of_string(new_word, memo)
+                    
+
+            generated_mass = sum([math.exp(state_dict["$"]) for s, state_dict in memo.iteritems() if s != ()])
+
+        for k in memo.keys():
+            if "$" not in memo[k]:
+                del memo[k]
+                continue
+            if memo[k]["$"] == Automaton.m_inf:
+                del memo[k]
+
+        return memo
 
 def optparser():
     parser = OptionParser()
