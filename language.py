@@ -16,7 +16,7 @@ def main():
         lang = wfsa.language()
     for w in lang:
         prob = math.exp(lang[w]["$"])
-        print "{0}\t{1}".format("".join(w), prob)
+        print "{0} {1}".format("".join(w), prob)
 
 if __name__ == "__main__":
     main()
