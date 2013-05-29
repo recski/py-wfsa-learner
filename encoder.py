@@ -88,7 +88,10 @@ class Encoder(object):
         automaton_bits = emit_bits + trans_bits
         err_bits = automaton.distance_from_corpus(corpus,
                        Automaton.kullback, reverse)
-        return automaton_bits, emit_bits, trans_bits, err_bits
+        lang = automaton.language()
+        gen_lang_entropy = sum([-d["$"] * math.log(d["$"])
+                                for d in lang.itervalues() if d["$"] > 0.0])
+        return automaton_bits, emit_bits, trans_bits, err_bits, gen_lang_entropy
 
 def main():
     automaton = Automaton.create_from_dump(sys.argv[1])

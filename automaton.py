@@ -442,17 +442,20 @@ class Automaton(object):
         self.m[state+'_0'] = {hub_out:0.0}    
         self.m[new_state+'_0'] = {hub_out:0.0}
 
-    def language(self, remaining=1e-3):
+    def language(self):
         generated_mass = 0.0
 
         emits = set(self.emissions.itervalues())
         memo = self.init_memo()
-        while generated_mass < 1.0 - remaining:
+        prev_mass = -1.0
+        while (abs(generated_mass - prev_mass) >= 1e-6
+                   and 1.0 - generated_mass > 1e-4):
+
+            prev_mass = generated_mass
             for word in memo.keys():
                 for emit in emits:
                     new_word = word + emit
                     self.update_probability_of_string(new_word, memo)
-                    
 
             generated_mass = sum([math.exp(state_dict["$"]) for s, state_dict in memo.iteritems() if s != ()])
 
