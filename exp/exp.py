@@ -75,9 +75,9 @@ class Exp(object):
         wfsa.finalize()
         wfsa.quantizer = quantizer
         encoder.state_bits = state_bits
-        bits_a, bits_e, bits_t, err = encode_wfsa(wfsa, corpus, encoder)
+        bits_a, bits_e, bits_t, err, hq = encode_wfsa(wfsa, corpus, encoder)
 
-        res = [exp_name, bits_a, bits_e, bits_t, err]
+        res = [exp_name, bits_a, bits_e, bits_t, err, hq]
         return res
 
     def run_3state_exp(self, quantizer, distance, harant, emissions,
@@ -121,10 +121,10 @@ class Exp(object):
         encoder = (self.morpheme_encoder if emissions=="m" else
                    self.unigram_encoder)
         encoder.state_bits = state_bits
-        bits_a, bits_e, bits_t, err = encode_wfsa(
+        bits_a, bits_e, bits_t, err, hq = encode_wfsa(
             learnt_wfsa, corpus, encoder)
 
-        return [exp_name, bits_a, bits_e, bits_t, err]
+        return [exp_name, bits_a, bits_e, bits_t, err, hq]
 
     def run_sze_type_exp(self, quantizer, distance, emissions, state_bits):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
@@ -162,7 +162,7 @@ class Exp(object):
 
         # encode automaton
         encoder = Encoder(1.56655)
-        bits_a, bits_e, bits_t, err = encode_wfsa(
+        bits_a, bits_e, bits_t, err, hq = encode_wfsa(
             learnt_wfsa, corpus, encoder)
         return [exp_name, bits_a, bits_e, bits_t, err]
 
@@ -200,11 +200,15 @@ class Exp(object):
             with open(learnt_wfsa_filename, "w") as of:
                 learnt_wfsa.dump(of)
 
+<<<<<<< HEAD
         # encode automaton
         encoder = Encoder(0.933201)
         bits_a, bits_e, bits_t, err = encode_wfsa(
             learnt_wfsa, corpus, encoder)
         return [exp_name, bits_a, bits_e, bits_t, err]
+=======
+        return [exp_name, bits_a, bits_e, bits_t, err, hq]
+>>>>>>> 3358c8a389b7541a76a0f315ff7c590532ce607e
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
