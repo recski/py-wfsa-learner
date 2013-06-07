@@ -39,7 +39,7 @@ def learn_wfsa(wfsa, corpus, distfp=None):
     wfsa_.round_and_normalize()
     if distfp is not None:
         learner = Learner(wfsa_, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=50, factor=0.8,
+            distfp=distfp, turns_for_each=500, factor=0.8,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
     return wfsa_
@@ -126,21 +126,19 @@ class Exp(object):
 
         return [exp_name, bits_a, bits_e, bits_t, err, hq]
 
-    def run_alphabet_exp(self, quantizer, distance, emissions):
-        exp_name = "{0}-{1}-{2}-{3}-{4}".format(
+    def run_sze_type_exp(self, quantizer, distance, emissions, state_bits):
+        exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
             quantizer.bits,
             abs(quantizer.neg_cutoff),
             'm',
             emissions,
-            distance[0])
+            distance[0], state_bits)
 
         logging.info("Running {0}".format(exp_name))
-
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
             "learnt_{0}.wfsa".format(exp_name))
 
-        corpus = (self.morpheme_corpus if emissions == "m" else
-                  self.unigram_corpus)
+        corpus = self.unigram_corpus
         # read Automaton or learn it and dump it finally
         if os.path.exists(learnt_wfsa_filename):
             # read already learnt automaton
@@ -163,12 +161,54 @@ class Exp(object):
                 learnt_wfsa.dump(of)
 
         # encode automaton
-        encoder = (self.morpheme_encoder if emissions=="m" else
-                   self.unigram_encoder)
+        encoder = Encoder(1.56655)
         bits_a, bits_e, bits_t, err, hq = encode_wfsa(
             learnt_wfsa, corpus, encoder)
+        return [exp_name, bits_a, bits_e, bits_t, err]
 
+    def run_sze_tok_exp(self, quantizer, distance, emissions, state_bits):
+        exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
+            quantizer.bits,
+            abs(quantizer.neg_cutoff),
+            'm',
+            emissions,
+            distance[0], state_bits)
+
+        logging.info("Running {0}".format(exp_name))
+        learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
+            "learnt_{0}.wfsa".format(exp_name))
+
+        corpus = self.unigram_corpus
+        # read Automaton or learn it and dump it finally
+        if os.path.exists(learnt_wfsa_filename):
+            # read already learnt automaton
+            learnt_wfsa = Automaton.create_from_dump(learnt_wfsa_filename)
+            learnt_wfsa.quantizer = quantizer
+            learnt_wfsa.round_and_normalize()
+        else:
+            # create and learn new automaton
+            alphabet = get_alphabet(corpus)
+            numbers_per_letters = dict([(letter, 1)
+                                        for letter in alphabet])
+            wfsa = Automaton.create_uniform_automaton(numbers_per_letters)
+            wfsa.finalize()
+            wfsa.quantizer = quantizer
+            wfsa.round_and_normalize()
+            learnt_wfsa = learn_wfsa(wfsa, corpus, distance)
+
+            # dump
+            with open(learnt_wfsa_filename, "w") as of:
+                learnt_wfsa.dump(of)
+
+<<<<<<< HEAD
+        # encode automaton
+        encoder = Encoder(0.933201)
+        bits_a, bits_e, bits_t, err = encode_wfsa(
+            learnt_wfsa, corpus, encoder)
+        return [exp_name, bits_a, bits_e, bits_t, err]
+=======
         return [exp_name, bits_a, bits_e, bits_t, err, hq]
+>>>>>>> 3358c8a389b7541a76a0f315ff7c590532ce607e
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
@@ -178,7 +218,7 @@ def run_exp(args):
     elif type_ in ["3", "a"] or type(type_) == list:
         return exp.run_3state_exp(quantizer, distance, type_, emission,
                                  state_bits)
-    elif type_ == "m":
-        return exp.run_alphabet_exp(quantizer, distance, emission)
-
-
+    elif type_ == "sze_tok":
+        return exp.run_sze_tok_exp(quantizer, distance, emission, state_bits)
+    elif type_ == "sze_type":
+        return exp.run_sze_type_exp(quantizer, distance, emission, state_bits)
