@@ -39,7 +39,7 @@ def learn_wfsa(wfsa, corpus, distfp=None):
     wfsa_.round_and_normalize()
     if distfp is not None:
         learner = Learner(wfsa_, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=500, factor=0.8,
+            distfp=distfp, turns_for_each=500, factor=0.33,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
     return wfsa_
@@ -200,15 +200,11 @@ class Exp(object):
             with open(learnt_wfsa_filename, "w") as of:
                 learnt_wfsa.dump(of)
 
-<<<<<<< HEAD
         # encode automaton
         encoder = Encoder(0.933201)
-        bits_a, bits_e, bits_t, err = encode_wfsa(
+        bits_a, bits_e, bits_t, err, hq = encode_wfsa(
             learnt_wfsa, corpus, encoder)
-        return [exp_name, bits_a, bits_e, bits_t, err]
-=======
         return [exp_name, bits_a, bits_e, bits_t, err, hq]
->>>>>>> 3358c8a389b7541a76a0f315ff7c590532ce607e
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
