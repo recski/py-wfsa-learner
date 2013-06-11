@@ -3,10 +3,8 @@ import math
 import logging
 from optparse import OptionParser
 
-def my_round(number, lowest, highest, bits, interval_len=None):
+def my_round(number, lowest, highest, levels, interval_len):
     """rounding with transformation of ranges"""
-    if interval_len is None:
-        interval_len = (highest - lowest) / bits
 
     # change interval for easier rounding because we want representers
     # to be not at highest/lowest values. highest/lowest values will be
@@ -17,9 +15,9 @@ def my_round(number, lowest, highest, bits, interval_len=None):
     new_total_length = highest - lowest + interval_len
     
     normalized_num = number / new_total_length
-    transformed_into_new_range = normalized_num * (2 ** bits)
+    transformed_into_new_range = normalized_num * (levels)
     rounded_in_new_range = round(transformed_into_new_range)
-    normalized_after_round = rounded_in_new_range / (2 ** bits)
+    normalized_after_round = rounded_in_new_range / (levels)
     transformed_back_into_old_range = normalized_after_round * new_total_length
     return transformed_back_into_old_range
 
@@ -60,30 +58,30 @@ class AbstractQuantizer(object):
         class_name = le[0][1:] # because it starts with '#'
         constr_args = le[1:]
         if class_name == "LinearQuantizer":
-            bits = int(constr_args[0])
-            quantizer = LinearQuantizer(bits)
+            levels = int(constr_args[0])
+            quantizer = LinearQuantizer(levels)
         elif class_name == "LogLinQuantizer":
-            bits = int(constr_args[0])
+            levels = int(constr_args[0])
             neg_cutoff = float(constr_args[1])
             pos_cutoff = float(constr_args[2])
-            quantizer = LogLinQuantizer(bits, neg_cutoff, pos_cutoff)
+            quantizer = LogLinQuantizer(levels, neg_cutoff, pos_cutoff)
         else:
             raise Exception("Unknown Quantizer class in dump")
         quantizer.read(istream)
         return quantizer
 
 class LinearQuantizer(AbstractQuantizer):
-    def __init__(self, bits):
+    def __init__(self, levels):
         AbstractQuantizer.__init__(self)
-        self.bits = bits
+        self.levels = levels
         self.interval_to_rep = {}
 
     @staticmethod
-    def create(bits, neg, pos):
-        lc = LinearQuantizer(bits)
+    def create(levels, neg, pos):
+        lc = LinearQuantizer(levels)
 
         # keep to codes for -inf and +inf
-        int_len = (pos - neg) / (2 ** bits - 2)
+        int_len = (pos - neg) / (levels - 2)
         
         # left most interval
         lc.interval_to_rep[(float("-inf"), neg)] = neg - int_len / 2.0
@@ -91,9 +89,9 @@ class LinearQuantizer(AbstractQuantizer):
 
         # right most interval
         lc.interval_to_rep[(pos, float("inf"))] = pos + int_len / 2.0
-        lc.rep_to_code[pos + int_len / 2.0] = 2 ** bits - 1
+        lc.rep_to_code[pos + int_len / 2.0] = levels - 1
 
-        for code_i in xrange(1, 2 ** bits - 1):
+        for code_i in xrange(1, levels - 1):
             interval = (neg + (code_i - 1) * int_len, neg + (code_i) * int_len)
             rep = (interval[1] + interval[0]) / 2.0
             lc.interval_to_rep[interval] = rep
@@ -122,7 +120,7 @@ class LinearQuantizer(AbstractQuantizer):
 
     def _dump_header(self, ostream):
         AbstractQuantizer._dump_header(self, ostream)
-        ostream.write("\t{0}\n".format(self.bits))
+        ostream.write("\t{0}\n".format(self.levels))
 
     def dump(self, ostream):
         AbstractQuantizer.dump(self, ostream)
@@ -141,9 +139,8 @@ class LinearQuantizer(AbstractQuantizer):
 class LogLinQuantizer(LinearQuantizer):
     """ Class to realize linear quantizing on log space values"""
 
-    def __init__(self, bits, neg_cutoff=-30, pos_cutoff=0):
-        """ @bits: on how many bits we want to store information
-                   (number of representers)
+    def __init__(self, levels, neg_cutoff=-30, pos_cutoff=0):
+        """ @levels: how many levels we want to use
             @neg_cutoff: below this, everything is represented at cutoff,
                          but above only with epsilon is represented as the
                          next representer
@@ -151,11 +148,11 @@ class LogLinQuantizer(LinearQuantizer):
                          but below only with epsilon is represented as the
                          previous representer
         """
-        LinearQuantizer.__init__(self, bits)
+        LinearQuantizer.__init__(self, levels)
         self.neg_cutoff = neg_cutoff
         self.pos_cutoff = pos_cutoff
 
-        useful_codes = 2 ** bits
+        useful_codes = levels
 
         #last_rep = float("-inf")
         last_rep = 2 * neg_cutoff
@@ -164,7 +161,7 @@ class LogLinQuantizer(LinearQuantizer):
         useful_codes -= 1
 
         if self.pos_cutoff != 0:
-            self.rep_to_code[self.pos_cutoff] = 2 ** bits - 1
+            self.rep_to_code[self.pos_cutoff] = levels - 1
             self.interval_to_rep[(self.pos_cutoff, 0.0)] = self.pos_cutoff
             useful_codes -= 1
 
@@ -191,7 +188,7 @@ class LogLinQuantizer(LinearQuantizer):
             return self.pos_cutoff
         else:
             val = my_round(number, self.neg_cutoff, self.pos_cutoff,
-                           self.bits, self.interval_len)
+                           self.levels, self.interval_len)
             return val
 
     def read(self, istream):
@@ -202,7 +199,7 @@ class LogLinQuantizer(LinearQuantizer):
     def _dump_header(self, ostream):
         AbstractQuantizer._dump_header(self, ostream)
         ostream.write("\t{0}\t{1}\t{2}\n".format(
-            self.bits, self.neg_cutoff, self.pos_cutoff))
+            self.levels, self.neg_cutoff, self.pos_cutoff))
 
 def optparser():
     parser = OptionParser()
@@ -211,8 +208,8 @@ def optparser():
                       help="what kind of quantizer to create. " + 
                       "Choices are: linear an loglinear with cutoff")
 
-    parser.add_option("-b", "--bits", dest="bits", type="int", default=8,
-                      help="how many bits to use. [default=%default]")
+    parser.add_option("-n", "--levels", dest="levels", type="int", default=256,
+                      help="how many levels to use. [default=%default]")
 
     parser.add_option("", "--min", dest="low", type="float", default=-30.,
                       help="lowest value to encode when using linear" +
@@ -236,11 +233,11 @@ def create_quantizer(options):
     output = (open(options.output, "w") if options.output else sys.stdout)
 
     if options.typ == "linear":
-        lc = LinearQuantizer.create(options.bits, options.low, options.high)
+        lc = LinearQuantizer.create(options.levels, options.low, options.high)
         lc.dump(output)
         return
     elif options.typ == "loglinear_cutoff":
-        llc = LogLinQuantizer(options.bits, options.low, options.high)
+        llc = LogLinQuantizer(options.levels, options.low, options.high)
         llc.dump(output)
         return
 
