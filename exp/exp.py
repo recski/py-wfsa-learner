@@ -12,14 +12,14 @@ from encoder import Encoder
 from learner import Learner
 from automaton import Automaton
 
-def generate_quantizers(bits, cutoffs):
-    for bits in bits:
+def generate_quantizers(levels, cutoffs):
+    for level in levels:
         for cutoff in cutoffs:
-            quantizer = LogLinQuantizer(bits, cutoff)
+            quantizer = LogLinQuantizer(level, cutoff)
             yield quantizer
 
-def generate_options(bits, cutoffs, distances, emissions, type_, state_bits):
-    for q in generate_quantizers(bits, cutoffs):
+def generate_options(levels, cutoffs, distances, emissions, type_, state_bits):
+    for q in generate_quantizers(levels, cutoffs):
         for d in distances:
             for e in emissions:
                 for t in type_:
@@ -58,7 +58,7 @@ class Exp(object):
 
     def run_list_exp(self, quantizer, emission, state_bits):
         aut_name = "{0}-{1}-l-{2}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             emission)
         exp_name = "{0}-{1}".format(aut_name, state_bits)
@@ -83,7 +83,7 @@ class Exp(object):
     def run_3state_exp(self, quantizer, distance, harant, emissions,
                        state_bits):
         aut_name = "{0}-{1}-{2}-{3}-{4}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             "_".join(("@".join(h) if type(h) == tuple else h) for h in harant),
             emissions,
@@ -128,7 +128,7 @@ class Exp(object):
 
     def run_sze_type_exp(self, quantizer, distance, emissions, state_bits):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             'm',
             emissions,
@@ -168,7 +168,7 @@ class Exp(object):
 
     def run_sze_tok_exp(self, quantizer, distance, emissions, state_bits):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             'm',
             emissions,
