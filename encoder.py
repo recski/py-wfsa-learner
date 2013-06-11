@@ -38,7 +38,7 @@ class Encoder(object):
         automaton_emission_bits = 0.0
         automaton_trans_bits = 0.0
         q = automaton.quantizer
-        edge_bits = q.bits
+        edge_bits = math.log(q.levels, 2)
         for state in automaton.m:
             logging.debug("State {0}".format(state))
 
