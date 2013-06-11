@@ -7,7 +7,6 @@ from optparse import OptionParser
 from automaton import Automaton
 from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
-from mdl import moore_mdl as mdl
 
 class Learner(object):
     def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
