@@ -7,5 +7,5 @@ for c in E P M I EI PI MI MEI; do
     mkdir out/discard/$fn 2> /dev/null
     echo $fn
     echo "nice python exp_discard.py discard/$fn $fn > discard/$fn/$fn.out 2> discard/$fn/$fn.log "
-    nice python exp_sze.py out/discard/$fn ../data/discard/$fn > out/discard/$fn/$fn.out 2> out/discard/$fn/$fn.log 
+    nice python exp_sze.py out/discard/$fn ../data/discard/$fn sze_toks > out/discard/$fn/$fn.out 2> out/discard/$fn/$fn.log 
 done
