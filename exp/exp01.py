@@ -17,13 +17,17 @@ def main(wd):
     exp = Exp(corpus_fn, wd)
 
     pool = Pool(processes=1)
-    bits = [6, 7, 8, 9, 10, 11, 12, 14, 16]
+    levels = [14] + [2**b for b in [6, 7, 8, 9, 10, 11, 12, 14, 16]]
+    levels = [14]
     cutoffs = [-20]
     distances = ["kullback"]
     emissions = ["c", "m"]
+    emissions = ["c"]
     type_ = ["l", "3", ["hogy"], "a"]
+    type_ = ["l"]
     state_bits = ["u", "e"]
-    options = list(generate_options(bits, cutoffs, distances, emissions, type_,
+    state_bits = ["u"]
+    options = list(generate_options(levels, cutoffs, distances, emissions, type_,
                                     state_bits))
     res = pool.map(run_exp, [(exp,) + o for o in options])
     for r in res:

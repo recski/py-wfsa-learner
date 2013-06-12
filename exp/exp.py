@@ -12,14 +12,14 @@ from encoder import Encoder
 from learner import Learner
 from automaton import Automaton
 
-def generate_quantizers(bits, cutoffs):
-    for bits in bits:
+def generate_quantizers(levels, cutoffs):
+    for level in levels:
         for cutoff in cutoffs:
-            quantizer = LogLinQuantizer(bits, cutoff)
+            quantizer = LogLinQuantizer(level, cutoff)
             yield quantizer
 
-def generate_options(bits, cutoffs, distances, emissions, type_, state_bits):
-    for q in generate_quantizers(bits, cutoffs):
+def generate_options(levels, cutoffs, distances, emissions, type_, state_bits):
+    for q in generate_quantizers(levels, cutoffs):
         for d in distances:
             for e in emissions:
                 for t in type_:
@@ -39,7 +39,7 @@ def learn_wfsa(wfsa, corpus, distfp=None):
     wfsa_.round_and_normalize()
     if distfp is not None:
         learner = Learner(wfsa_, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=50, factor=0.1,
+            distfp=distfp, turns_for_each=500, factor=0.33,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
     logging.debug("WFSA learnt")
@@ -59,7 +59,7 @@ class Exp(object):
 
     def run_list_exp(self, quantizer, emission, state_bits):
         aut_name = "{0}-{1}-l-{2}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             emission)
         exp_name = "{0}-{1}".format(aut_name, state_bits)
@@ -76,15 +76,16 @@ class Exp(object):
         wfsa.finalize()
         wfsa.quantizer = quantizer
         encoder.state_bits = state_bits
-        bits_a, bits_e, bits_t, err, hq = encode_wfsa(wfsa, corpus, encoder)
+        bits_a, bits_e, bits_t, err, hq, tc = encode_wfsa(wfsa,
+                                                          corpus, encoder)
 
-        res = [exp_name, bits_a, bits_e, bits_t, err, hq]
+        res = [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
         return res
 
     def run_3state_exp(self, quantizer, distance, harant, emissions,
                        state_bits):
         aut_name = "{0}-{1}-{2}-{3}-{4}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             "_".join(("@".join(h) if type(h) == tuple else h) for h in harant),
             emissions,
@@ -122,15 +123,15 @@ class Exp(object):
         encoder = (self.morpheme_encoder if emissions=="m" else
                    self.unigram_encoder)
         encoder.state_bits = state_bits
-        bits_a, bits_e, bits_t, err, hq = encode_wfsa(
+        bits_a, bits_e, bits_t, err, hq, tc = encode_wfsa(
             learnt_wfsa, corpus, encoder)
 
-        return [exp_name, bits_a, bits_e, bits_t, err, hq]
+        return [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
 
 
     def run_sze_exp(self, quantizer, distance, emissions, state_bits, entropy):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
-            quantizer.bits,
+            quantizer.levels,
             abs(quantizer.neg_cutoff),
             'm',
             emissions,
@@ -164,9 +165,9 @@ class Exp(object):
 
         # encode automaton
         encoder = Encoder(entropy)
-        bits_a, bits_e, bits_t, err, hq = encode_wfsa(
+        bits_a, bits_e, bits_t, err, hq, tc = encode_wfsa(
             learnt_wfsa, corpus, encoder)
-        return [exp_name, bits_a, bits_e, bits_t, err, hq]
+        return [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
 
     def run_sze_tok_exp(self, quantizer, distance, emissions, state_bits):
         entropy = 0.933201

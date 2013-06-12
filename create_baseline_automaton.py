@@ -6,6 +6,7 @@ import math
 
 from automaton import Automaton
 from corpus import read_corpus, normalize_corpus
+from quantizer import LogLinQuantizer
 
 def create_word_wfsa(corpus):
     wfsa = Automaton()
@@ -23,6 +24,9 @@ def main():
     normalize_corpus(corpus)
     wfsa = create_word_wfsa(corpus)
     wfsa.finalize()
+    if len(sys.argv) == 4:
+        wfsa.quantizer = LogLinQuantizer(int(sys.argv[2]), int(sys.argv[3]))
+        wfsa.round_and_normalize()
     wfsa.dump(sys.stdout)
 
 if __name__ == "__main__":

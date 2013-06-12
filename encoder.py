@@ -38,7 +38,7 @@ class Encoder(object):
         automaton_emission_bits = 0.0
         automaton_trans_bits = 0.0
         q = automaton.quantizer
-        edge_bits = q.bits
+        edge_bits = math.log(q.levels, 2)
         for state in automaton.m:
             logging.debug("State {0}".format(state))
 
@@ -92,7 +92,10 @@ class Encoder(object):
         gen_lang_entropy = sum([-math.exp(d["$"]) * d["$"]
                                 for d in lang.itervalues() if d["$"] < 0.0])
         gen_lang_entropy /= math.log(2)
-        return automaton_bits, emit_bits, trans_bits, err_bits, gen_lang_entropy
+        total_cost = (automaton_bits + 
+                      len(corpus) * (gen_lang_entropy + err_bits))
+        return (automaton_bits, emit_bits, trans_bits, err_bits, 
+                gen_lang_entropy, total_cost)
 
 def main():
     automaton = Automaton.create_from_dump(sys.argv[1])
