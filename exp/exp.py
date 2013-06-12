@@ -34,12 +34,14 @@ def create_corpora(corpus_fn):
     normalize_corpus(morpheme_corpus)
     return unigram_corpus, morpheme_corpus
 
-def learn_wfsa(wfsa, corpus, distfp=None):
+def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
     wfsa_ = copy(wfsa)
     wfsa_.round_and_normalize()
+    if not checkpoint:
+        checkpoint = lambda x: wfsa_.dump(open('{0}.wfsa'.format(x), 'w'))
     if distfp is not None:
-        learner = Learner(wfsa_, corpus, pref_prob=0.0,
-            distfp=distfp, turns_for_each=500, factor=0.33,
+        learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
+            distfp=distfp, turns_for_each=50, factor=0.33,
             start_temp=1e-5, end_temp=1e-7, tempq=0.9)
         learner.main()
     logging.debug("WFSA learnt")
