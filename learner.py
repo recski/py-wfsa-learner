@@ -9,7 +9,8 @@ from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
 
 class Learner(object):
-    def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
+    def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each,
+                factors):
         """
         Learner class implements a simulated annealing method and
         is capable of applying downhill simplex as a preference instead
@@ -20,14 +21,10 @@ class Learner(object):
         @param pref_prob: probability of using downhill preference
         @param distfp: distance function pointer (kullback, l1err, sqerr)
         @param turns_for_each: iterations at one temperature
-        @param factor: edge change factor
-        @param start_temp: initial temperature
-        @param end_temp: final temperature
-        @param tempq: temperature reduction quotient
+        @param factors: list of factors, length of list is how many bursts/
+                        epochs we want to run, and every element is a float
+                        which is the factor of the actual epoch
         """
-        self.start_temperature = start_temp
-        self.end_temperature   = end_temp
-        self.temp_quotient = tempq
         self.turns_for_each = turns_for_each
         self.preference_probability = pref_prob
 
@@ -35,7 +32,8 @@ class Learner(object):
         self.corpus = corpus
 
         self.distfp = getattr(Automaton, distfp)
-        self.factor = factor
+
+        self.factors = factors
         #self.preferred_node_pair = None
         #self.preferred_direction = None
         #self.disallowed_node_pair = None
@@ -94,7 +92,7 @@ class Learner(object):
         turn_count = 0
         prev = None
         prev_prev = None
-        while True:
+        for factor in self.factors:
             if turn_count == 0:
                 logging.info("Running an iteration of Simulated Annealing with " +
                              "{0} temperature and at {1} energy level.".format(
