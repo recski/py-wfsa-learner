@@ -171,10 +171,13 @@ class Exp(object):
 
     def run_sze_tok_exp(self, quantizer, distance, emissions, state_bits):
         entropy = 0.933201
-        return self.run_sze_exp(quantizer, distance, emissions, state_bits, entropy)
+        return self.run_sze_exp(quantizer, distance, emissions, state_bits,
+                                entropy)
+
     def run_sze_type_exp(self, quantizer, distance, emissions, state_bits):
         entropy = 1.56655
-        return self.run_sze_exp(quantizer, distance, emissions, state_bits, entropy)
+        return self.run_sze_exp(quantizer, distance, emissions, state_bits,
+                                entropy)
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
