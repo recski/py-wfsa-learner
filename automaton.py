@@ -393,9 +393,9 @@ class Automaton(object):
             self.normalize_state(state)
 	        
     def boost_edge(self, edge, factor):
-        """Multiplies the transition probability between n1 and n2 by factor"""
+        """Adds @factor logprob to @edge"""
         s1, s2 = edge
-        self.m[s1][s2] += math.log(factor)
+        self.m[s1][s2] += factor
         self.round_and_normalize_state(s1)
         self.check_state_sum(s1)
 
@@ -405,8 +405,8 @@ class Automaton(object):
         if abs(1.0 - s_sum) < 1e-3:
             return
         else:
-            raise Exception("transitions from state don't sum to 1, " +
-                          "but {0}".format(s_sum))
+            raise Exception("transitions from state {0} ".format(state) + 
+                            "don't sum to 1, but {0}".format(s_sum))
 
     def dump(self, f):
         if self.quantizer is not None:
