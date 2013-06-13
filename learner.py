@@ -78,8 +78,13 @@ class Learner(object):
                 (s1, s2) == self.previous_change_options["edge"]):
                     break
         change_options["edge"] = (s1, s2)
-        change_options["factor"] = (factor if random.random() > 0.5
-                                    else -factor)
+        factor = (factor if random.random() > 0.5 else -factor)
+        
+        if self.automaton.quantizer is not None:
+            factor = self.automaton.quantizer.shift(
+                self.automaton.m[s1][s2], factor) - self.automaton.m[s1][s2]
+
+        change_options["factor"] = factor
         return change_options
 
     def choose_change_options(self, change_options_random, *args):
@@ -129,6 +134,7 @@ class Learner(object):
         option_randomizer = lambda x: self.randomize_automaton_change(x)
         self.simulated_annealing(compute_energy, change_something,
                                  change_back, option_randomizer)
+
 
 def csl2l_callback(option, opt, value, parser):
     setattr(parser.values, option.dest, [float(_) for _ in value.split(',')])
