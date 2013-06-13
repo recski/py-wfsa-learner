@@ -58,8 +58,12 @@ class Automaton(object):
                 s1, _, s2, weight = l
                 s2 = s2.strip(':')
                 weight = float(weight)
-                if weight > 0.0:
+
+                # check this with 1e-10 instead of 0.0 because of floating 
+                # point precision error
+                if weight > 1e-10:
                     raise ValueError("Only logprogs are accepted in dumps")
+
                 automaton.m[s1][s2] = weight
             elif len(l) == 2:
                 state = l[0].rstrip(":")
@@ -388,8 +392,6 @@ class Automaton(object):
                     edges[other_state] = eps
 
             # normalize the transitions
-            #logging.warning("When normalizing, smoothed value won't be " +
-                            #"actually log(Automaton.eps) but a smaller value")
             self.normalize_state(state)
 	        
     def boost_edge(self, edge, factor):
