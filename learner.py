@@ -9,7 +9,7 @@ from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
 
 class Learner(object):
-    def __init__(self, automaton, corpus, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
+    def __init__(self, automaton, corpus, checkpoint, pref_prob, distfp, turns_for_each, factor, start_temp, end_temp, tempq):
         """
         Learner class implements a simulated annealing method and
         is capable of applying downhill simplex as a preference instead
@@ -36,13 +36,15 @@ class Learner(object):
 
         self.distfp = getattr(Automaton, distfp)
         self.factor = factor
+        self.checkpoint = checkpoint
         #self.preferred_node_pair = None
         #self.preferred_direction = None
         #self.disallowed_node_pair = None
 
     @staticmethod
     def create_from_options(automaton, corpus, options):
-        return Learner(automaton, corpus, pref_prob=options.downhill_factor,
+        return Learner(automaton, corpus, checkpoint=None,
+                       pref_prob=options.downhill_factor,
                        distfp=options.distfp, turns_for_each=options.iter,
                        factor=options.factor, start_temp=options.start_temp,
                        end_temp=options.end_temp, tempq=options.tempq)
@@ -120,6 +122,8 @@ class Learner(object):
 
             turn_count += 1
             if turn_count == turns_for_each_temp:
+                if self.checkpoint:
+                    self.checkpoint(temperature)
                 turn_count = 0
                 temperature *= tempq
                 if temperature < end:
