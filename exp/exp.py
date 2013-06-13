@@ -1,5 +1,6 @@
 import sys
 import os
+import math
 import logging
 
 sys.path.insert(0, sys.path[0].rsplit("/", 1)[0])
@@ -40,9 +41,16 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
     if not checkpoint:
         checkpoint = lambda x: wfsa_.dump(open('{0}.wfsa'.format(x), 'w'))
     if distfp is not None:
-        learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
-            distfp=distfp, turns_for_each=50, factor=0.33,
-            start_temp=1e-5, end_temp=1e-7, tempq=0.9)
+        if wfsa_.quantizer is not None:
+            bits = int(round(math.log(wfsa_.quantizer.levels, 2)))
+            f = [2**i for i in xrange(bits-2, -1, -1)]
+            t = [1e-7 * i for i in xrange(bits-1, 0, -1)]
+            learner = Learner(wfsa_, corpus, pref_prob=0.0,
+                distfp=distfp, turns_for_each=100, factors=f,
+                temperatures=t)
+        else:
+            # continuous case, not implemented
+            pass
         learner.main()
     logging.debug("WFSA learnt")
     return wfsa_

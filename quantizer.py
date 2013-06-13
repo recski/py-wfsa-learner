@@ -10,20 +10,21 @@ def my_round(number, lowest, highest, levels, interval_len):
     # to be not at highest/lowest values. highest/lowest values will be
     # points where round() change value
 
-    lowest -= interval_len / 2.0
-    highest += interval_len / 2.0
-    new_total_length = highest - lowest + interval_len
-    
-    normalized_num = number / new_total_length
-    transformed_into_new_range = normalized_num * (levels)
+    total_length = highest - lowest 
+    normalized_num = number / total_length
+    transformed_into_new_range = normalized_num * levels
     rounded_in_new_range = round(transformed_into_new_range)
-    normalized_after_round = rounded_in_new_range / (levels)
-    transformed_back_into_old_range = normalized_after_round * new_total_length
-    return transformed_back_into_old_range
+    normalized_after_round = rounded_in_new_range / levels
+    transformed_back_into_old_range = normalized_after_round * total_length
+    # shifting a half interval because highest is not a representer
+    return transformed_back_into_old_range - interval_len / 2.0
 
 class AbstractQuantizer(object):
     def __init__(self):
         self.rep_to_code = {}
+        self.code_to_rep = {}
+        self._first = None
+        self._last = None
 
     def representer(self, number):
         """returns a representer element for @number as a float"""
@@ -40,7 +41,34 @@ class AbstractQuantizer(object):
                 return self.rep_to_code[known_rep]
 
         raise Exception("There is no code for this representer")
-    
+
+    def first(self):
+        if self._first is not None:
+            return self._first
+        s = sorted(self.code_to_rep.keys())
+        self._first = s[0]
+        self._last = s[-1]
+        return self._first
+
+    def last(self):
+        if self._last is not None:
+            return self._last
+        s = sorted(self.code_to_rep.keys())
+        self._first = s[0]
+        self._last = s[-1]
+        return self._last
+
+    def shift(self, element, shift):
+        """returns a representer that is @shift levels away (+-)
+        from @element"""
+        new_element_code = self.rep_to_code[self.representer(element)] + shift
+        if new_element_code < self.first():
+            new_element_code = self.first()
+        if new_element_code > self.last():
+            new_element_code = self.last()
+
+        return self.code_to_rep[new_element_code]
+
     def _dump_header(self, ostream):
         ostream.write("#{0}".format(self.__class__.__name__))
 
@@ -82,6 +110,7 @@ class LinearQuantizer(AbstractQuantizer):
 
         # keep to codes for -inf and +inf
         int_len = (pos - neg) / (levels - 2)
+        lc.interval_len = int_len
         
         # left most interval
         lc.interval_to_rep[(float("-inf"), neg)] = neg - int_len / 2.0
@@ -97,11 +126,14 @@ class LinearQuantizer(AbstractQuantizer):
             lc.interval_to_rep[interval] = rep
             lc.rep_to_code[rep] = code_i
 
+        lc.code_to_rep = dict([(v, k) for k, v in lc.rep_to_code.iteritems()])
+
         return lc
 
     def representer(self, number):
         for interval, rep in self.interval_to_rep.iteritems():
-            if number > interval[0] and number <= interval[1]:
+            if number > interval[0] and (number <= interval[1]
+                    or rep == self.code_to_rep[self.last()]):
                 return rep
 
     def read(self, istream):
@@ -116,6 +148,7 @@ class LinearQuantizer(AbstractQuantizer):
             interval = (float(left), float(right))
             rep = float(rep)
             self.rep_to_code[rep] = code
+            self.code_to_rep[code] = rep
             self.interval_to_rep[interval] = rep
 
     def _dump_header(self, ostream):
@@ -154,13 +187,12 @@ class LogLinQuantizer(LinearQuantizer):
 
         useful_codes = levels
 
-        #last_rep = float("-inf")
         last_rep = 2 * neg_cutoff
         self.rep_to_code[last_rep] = 0
         self.interval_to_rep[(float("-inf"),self.neg_cutoff)] = last_rep
         useful_codes -= 1
 
-        if self.pos_cutoff != 0:
+        if abs(self.pos_cutoff) > 1e-10:
             self.rep_to_code[self.pos_cutoff] = levels - 1
             self.interval_to_rep[(self.pos_cutoff, 0.0)] = self.pos_cutoff
             useful_codes -= 1
@@ -172,24 +204,13 @@ class LogLinQuantizer(LinearQuantizer):
             representer = (self.neg_cutoff
                            + ((useful_code_i + 1) * interval_len
                               + useful_code_i * interval_len) / 2.0)
+
             self.interval_to_rep[(representer - interval_len / 2.0,
                 representer + interval_len / 2.0)] = representer
+            
             self.rep_to_code[representer] = code
-
-    def representer(self, number):
-        """ Because this is a linear coder, easy to locate representers,
-        we have cutoffs, though, that we have to watch"""
-
-        # if less than anything, return lowest representer
-        if number <= self.neg_cutoff:
-            return self.interval_to_rep[(float("-inf"),self.neg_cutoff)]
-        # if more than anything, return highest representer
-        elif self.pos_cutoff != 0 and number > self.pos_cutoff:
-            return self.pos_cutoff
-        else:
-            val = my_round(number, self.neg_cutoff, self.pos_cutoff,
-                           self.levels, self.interval_len)
-            return val
+        self.code_to_rep = dict([(v, k) for k, v in 
+                                 self.rep_to_code.iteritems()])
 
     def read(self, istream):
         logging.warning("while using LogLinQuantizer class for coding, only " +

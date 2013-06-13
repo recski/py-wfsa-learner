@@ -58,8 +58,12 @@ class Automaton(object):
                 s1, _, s2, weight = l
                 s2 = s2.strip(':')
                 weight = float(weight)
-                if weight > 0.0:
+
+                # check this with 1e-10 instead of 0.0 because of floating 
+                # point precision error
+                if weight > 1e-10:
                     raise ValueError("Only logprogs are accepted in dumps")
+
                 automaton.m[s1][s2] = weight
             elif len(l) == 2:
                 state = l[0].rstrip(":")
@@ -388,14 +392,12 @@ class Automaton(object):
                     edges[other_state] = eps
 
             # normalize the transitions
-            #logging.warning("When normalizing, smoothed value won't be " +
-                            #"actually log(Automaton.eps) but a smaller value")
             self.normalize_state(state)
 	        
     def boost_edge(self, edge, factor):
-        """Multiplies the transition probability between n1 and n2 by factor"""
+        """Adds @factor logprob to @edge"""
         s1, s2 = edge
-        self.m[s1][s2] += math.log(factor)
+        self.m[s1][s2] += factor
         self.round_and_normalize_state(s1)
         self.check_state_sum(s1)
 
@@ -405,8 +407,8 @@ class Automaton(object):
         if abs(1.0 - s_sum) < 1e-3:
             return
         else:
-            raise Exception("transitions from state don't sum to 1, " +
-                          "but {0}".format(s_sum))
+            raise Exception("transitions from state {0} ".format(state) + 
+                            "don't sum to 1, but {0}".format(s_sum))
 
     def dump(self, f):
         if self.quantizer is not None:

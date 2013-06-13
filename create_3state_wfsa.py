@@ -137,6 +137,8 @@ def create_new_three_state_fsa(corpus, harant="a", emissions="m"):
                 fsa.m[state_name]["$"] = 0.0
                 fsa.emissions[state_name] = (prefix,suffix)
                 fsa.m_emittors[(prefix,suffix)].add(state_name)
+
+    fsa.round_and_normalize()
     
     return fsa
 
