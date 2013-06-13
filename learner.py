@@ -130,7 +130,7 @@ class Learner(object):
                     change_back()
 
             if self.checkpoint:
-                self.checkpoint(temperature)
+                self.checkpoint(factor, temperature)
 
     def main(self):
         compute_energy = lambda: self.automaton.distance_from_corpus(

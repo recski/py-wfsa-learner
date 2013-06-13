@@ -45,7 +45,7 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
             bits = int(round(math.log(wfsa_.quantizer.levels, 2)))
             f = [2**i for i in xrange(bits-2, -1, -1)]
             t = [1e-7 * i for i in xrange(bits-1, 0, -1)]
-            learner = Learner(wfsa_, corpus, pref_prob=0.0,
+            learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
                 distfp=distfp, turns_for_each=100, factors=f,
                 temperatures=t)
         else:
@@ -57,6 +57,12 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
 
 def encode_wfsa(wfsa, corpus, encoder):
     return encoder.encode(copy(wfsa), corpus)
+
+def checkpoint_dump(wfsa, name, *args):
+    cp_wfsa_fn = "{0}_{1}.wfsa".format(name,
+        "_".join(str(_) for _ in args))
+    with open(cp_wfsa_fn, "w") as of:
+        wfsa.dump(of)
 
 class Exp(object):
     def __init__(self, corpus_fn, workdir):
@@ -123,7 +129,9 @@ class Exp(object):
             wfsa.finalize()
             wfsa.quantizer = quantizer
             wfsa.round_and_normalize()
-            learnt_wfsa = learn_wfsa(wfsa, corpus, distance)
+            cp = lambda *x: checkpoint_dump(wfsa, 
+                "{0}/cp_{1}".format(self.workdir, aut_name), *x)
+            learnt_wfsa = learn_wfsa(wfsa, corpus, distance, cp)
 
             # dump
             with open(learnt_wfsa_filename, "w") as of:
