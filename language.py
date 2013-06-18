@@ -15,7 +15,8 @@ def main():
     else:
         lang = wfsa.language()
     for w in lang:
-        prob = math.exp(lang[w]["$"])
+        di = wfsa.state_indices["$"]
+        prob = math.exp(lang[w][di])
         print "{0} {1}".format("".join(w), prob)
 
 if __name__ == "__main__":
