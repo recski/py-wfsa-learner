@@ -88,10 +88,14 @@ class Encoder(object):
         automaton_bits = emit_bits + trans_bits
         err_bits = automaton.distance_from_corpus(corpus,
                        Automaton.kullback, reverse)
+
+        # computing entropy of generated language
         lang = automaton.language()
-        gen_lang_entropy = sum([-math.exp(d["$"]) * d["$"]
-                                for d in lang.itervalues() if d["$"] < 0.0])
+        di = automaton.state_indices["$"]
+        gen_lang_entropy = sum([-math.exp(l[di]) * l[di]
+                                for l in lang.itervalues() if l[di] < 0.0])
         gen_lang_entropy /= math.log(2)
+        
         total_cost = (automaton_bits + 
                       len(corpus) * (gen_lang_entropy + err_bits))
         return (automaton_bits, emit_bits, trans_bits, err_bits, 
