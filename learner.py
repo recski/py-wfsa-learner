@@ -3,6 +3,7 @@ import math
 import random
 import sys
 from optparse import OptionParser
+from copy import deepcopy as copy
 
 from automaton import Automaton
 from quantizer import AbstractQuantizer
@@ -45,6 +46,8 @@ class Learner(object):
         self.temps = temperatures
 
         self.checkpoint = checkpoint
+
+        self.previous_change_options = None
         #self.preferred_node_pair = None
         #self.preferred_direction = None
         #self.disallowed_node_pair = None
@@ -58,10 +61,18 @@ class Learner(object):
 
     def change_automaton(self, options=None, revert=False):
         if not revert:
-            self.automaton.boost_edge(options["edge"], options["factor"])
+            edge = options["edge"]
+            factor = options["factor"]
+            if self.automaton.quantizer is not None:
+                s1 = edge[0]
+                s2 = edge[1]
+                factor = self.automaton.quantizer.shift(
+                    self.automaton.m[s1][s2], factor) - self.automaton.m[s1][s2]
+
+            self.automaton.boost_edge(edge, factor)
         else:
-            self.automaton.boost_edge(self.previous_change_options["edge"],
-                                      -self.previous_change_options["factor"])
+            self.automaton.m = copy(self.previous_change_options["m"])
+
 
     def randomize_automaton_change(self, factor):
         change_options = {}
@@ -74,7 +85,7 @@ class Learner(object):
                 continue
 
             s2 = random.choice(self.automaton.m[s1].keys())
-            if not hasattr(self, "previous_change_options"):
+            if self.previous_change_options is None:
                 break
             else:
                 if not (self.previous_change_options["result"] == False and
@@ -83,15 +94,13 @@ class Learner(object):
         change_options["edge"] = (s1, s2)
         factor = (factor if random.random() > 0.5 else -factor)
         
-        if self.automaton.quantizer is not None:
-            factor = self.automaton.quantizer.shift(
-                self.automaton.m[s1][s2], factor) - self.automaton.m[s1][s2]
-
         change_options["factor"] = factor
+        change_options["m"] = copy(self.automaton.m)
         return change_options
 
     def choose_change_options(self, change_options_random, *args):
-        if random.random() < self.preference_probability:
+        if (random.random() < self.preference_probability
+            and self.previous_change_options is not None):
             # downhill
             change_options = self.previous_change_options
         else:
@@ -121,6 +130,8 @@ class Learner(object):
                     still_accepting_probability = random.random()
                     accept = (still_accepting_probability <
                               math.exp(-energy_change/temperature))
+                    #if accept:
+                        #print "Accepting:", energy_change
 
                 if accept:
                     energy = new_energy
