@@ -232,6 +232,7 @@ class Automaton(object):
         total = Automaton.m_inf
         # compute real emissions
         for previousState in self.emissions:
+            previousState_i = self.state_indices[previousState]
 
             # stop if no transitions to state
             if not state in self.m[previousState]:
@@ -244,8 +245,8 @@ class Automaton(object):
                 head = string[:-state_emit_l]
 
                 soFar = Automaton.m_inf
-                if head in memo and previousState in memo[head]:
-                    soFar = memo[head][previousState]
+                if head in memo:
+                    soFar = memo[head][previousState_i]
                     soFar += self.m[previousState][state]
                 total = max(soFar, total)
 
@@ -253,6 +254,7 @@ class Automaton(object):
         #if (not Automaton.nonemitting(state)):
         if True:
             for epsilonState in self.m.keys():
+                epsilonState_i = self.state_indices[epsilonState]
                 if not Automaton.nonemitting(epsilonState):
                     continue
 
@@ -263,17 +265,17 @@ class Automaton(object):
                 if not state in self.m[epsilonState]:
                     continue
 
-                if not string in memo or not epsilonState in memo[string]:
+                if not string in memo or memo[string][epsilonState_i] is None:
                     continue
 
-                soFar = memo[string][epsilonState]
+                soFar = memo[string][epsilonState_i]
                 soFar += self.m[epsilonState][state]
                 total = max(soFar, total)
 
         if string not in memo:
-            memo[string] = {}
+            memo[string] = [None] * len(self.state_indices)
 
-        memo[string][state] = total
+        memo[string][self.state_indices[state]] = total
 
     def update_probability_of_string(self, string, memo) :
         """Probability that the automaton emits this string"""
@@ -301,16 +303,27 @@ class Automaton(object):
 
         for string in topsorted :
             self.update_probability_of_string(string, memo)
-            output[string] = memo[string]["$"]
+            output[string] = memo[string][self.state_indices["$"]]
         return output
 
     def init_memo(self):
-        memo = {(): {}}
+        
+        # to save memory if memo is huge, inner dicts in memo are actually
+        # lists with state indices
+        states = set(self.m.keys())
+        states.add("$")
+        self.state_indices = dict([(s, i) for i, s in enumerate(states)])
+
+        memo = {(): [None] * len(states)}
         epsilon_reachables = set(["^"])
         while True:
             targets = set()
             for state in epsilon_reachables:
+                state_i = self.state_indices[state]
+
                 for target in self.m[state]:
+                    target_i = self.state_indices[target]
+
                     if target in epsilon_reachables:
                         continue
 
@@ -319,14 +332,14 @@ class Automaton(object):
                         # start is not memoized
 
                     so_far = Automaton.m_inf
-                    if target in memo[()]:
-                        so_far = memo[()][target]
+                    if memo[()][target_i] is not None:
+                        so_far = memo[()][target_i]
                     
                     prob_this_way = self.m[state][target]
                     if state != "^":
-                        prob_this_way += memo[()][state]
+                        prob_this_way += memo[()][state_i]
 
-                    memo[()][target] = max(so_far, prob_this_way)
+                    memo[()][target_i] = max(so_far, prob_this_way)
             epsilon_reachables |= targets
             if len(targets) == 0:
                 break
@@ -459,7 +472,21 @@ class Automaton(object):
                     new_word = word + emit
                     self.update_probability_of_string(new_word, memo)
 
-            generated_mass = sum([math.exp(state_dict["$"]) for s, state_dict in memo.iteritems() if s != ()])
+
+            # filter small probs
+            memo = dict([(k, [(None if (lp is None or lp < -100) else lp)
+                              for lp in l]) for k, l in memo.iteritems()])
+
+            # filter small prob words
+            memo = dict([(k, l) for k, l in memo.iteritems()
+                         if sum(filter(lambda x: x is not None, l))>-200])
+
+            # compute generated mass
+            generated_mass = sum([math.exp(prob_list[self.state_indices["$"]])
+                for s, prob_list in memo.iteritems() if s != ()])
+
+            # compute hq - only debug
+            # hq = sum([-probs[self.state_indices["$"]] * math.exp(probs[self.state_indices["$"]]) for probs in memo.itervalues()])
 
         for k in memo.keys():
             if "$" not in memo[k]:
