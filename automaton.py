@@ -245,7 +245,7 @@ class Automaton(object):
                 head = string[:-state_emit_l]
 
                 soFar = Automaton.m_inf
-                if head in memo:
+                if head in memo and memo[head][previousState_i] is not None:
                     soFar = memo[head][previousState_i]
                     soFar += self.m[previousState][state]
                 total = max(soFar, total)
@@ -472,7 +472,6 @@ class Automaton(object):
                     new_word = word + emit
                     self.update_probability_of_string(new_word, memo)
 
-
             # filter small probs
             memo = dict([(k, [(None if (lp is None or lp < -100) else lp)
                               for lp in l]) for k, l in memo.iteritems()])
@@ -483,16 +482,14 @@ class Automaton(object):
 
             # compute generated mass
             generated_mass = sum([math.exp(prob_list[self.state_indices["$"]])
-                for s, prob_list in memo.iteritems() if s != ()])
+                for s, prob_list in memo.iteritems() if (s != () and
+                prob_list[self.state_indices["$"]] is not None )])
 
             # compute hq - only debug
             # hq = sum([-probs[self.state_indices["$"]] * math.exp(probs[self.state_indices["$"]]) for probs in memo.itervalues()])
 
         for k in memo.keys():
-            if "$" not in memo[k]:
-                del memo[k]
-                continue
-            if memo[k]["$"] == Automaton.m_inf:
+            if memo[k][self.state_indices["$"]] is None:
                 del memo[k]
 
         return memo
