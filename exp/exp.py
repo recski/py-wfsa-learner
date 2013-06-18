@@ -43,10 +43,10 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
     if distfp is not None:
         if wfsa_.quantizer is not None:
             bits = int(round(math.log(wfsa_.quantizer.levels, 2)))
-            f = [2**i for i in xrange(bits-2, -1, -1)]
-            t = [1e-7 * i for i in xrange(bits-1, 0, -1)]
-            learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
-                distfp=distfp, turns_for_each=100, factors=f,
+            f = [2 ** i for i in xrange(bits-2, -1, -1)]
+            t = [1e-3 * i for i in xrange(bits-1, 0, -1)]
+            learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.2,
+                distfp=distfp, turns_for_each=200, factors=f,
                 temperatures=t)
         else:
             # continuous case, not implemented
