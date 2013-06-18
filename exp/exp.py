@@ -171,11 +171,15 @@ class Exp(object):
             alphabet = get_alphabet(corpus)
             numbers_per_letters = dict([(letter, 1)
                                         for letter in alphabet])
+            #print numbers_per_letters
             wfsa = Automaton.create_uniform_automaton(numbers_per_letters)
             wfsa.finalize()
             wfsa.quantizer = quantizer
             wfsa.round_and_normalize()
-            learnt_wfsa = learn_wfsa(wfsa, corpus, distance)
+            cp = lambda *x: checkpoint_dump(wfsa, 
+                "{0}/cp_{1}".format(self.workdir, exp_name), *x)
+            logging.info('learning starts here')
+            learnt_wfsa = learn_wfsa(wfsa, corpus, distance, cp)
 
             # dump
             with open(learnt_wfsa_filename, "w") as of:
@@ -199,7 +203,7 @@ class Exp(object):
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
-
+    
     if type_ == "l":
         return exp.run_list_exp(quantizer, emission, state_bits)
     elif type_ in ["3", "a"] or type(type_) == list:
