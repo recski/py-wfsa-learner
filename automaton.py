@@ -463,7 +463,7 @@ class Automaton(object):
         emits = set(self.emissions.itervalues())
         memo = self.init_memo()
         prev_mass = -1.0
-        while (abs(generated_mass - prev_mass) >= 1e-6
+        while (abs(generated_mass - prev_mass) >= 1e-4
                    and 1.0 - generated_mass > 1e-4):
 
             prev_mass = generated_mass
