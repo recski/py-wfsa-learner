@@ -132,7 +132,7 @@ class LinearQuantizer(AbstractQuantizer):
 
     def representer(self, number):
         for interval, rep in self.interval_to_rep.iteritems():
-            if number > interval[0] and (number <= interval[1]
+            if number >= interval[0] and (number <= interval[1]
                     or rep == self.code_to_rep[self.last()]):
                 return rep
 
