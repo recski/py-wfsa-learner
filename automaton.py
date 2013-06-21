@@ -453,10 +453,8 @@ class Automaton(object):
                     self.m[s1][s2] = float('-inf')
         for s2, p in self.m[state+'_0'].items():
             self.m[hub_out][s2] = p
-        
         self.m[state+'_0'] = {hub_out:0.0}    
         self.m[new_state+'_0'] = {hub_out:0.0}
-
     def language(self):
         generated_mass = 0.0
 
@@ -464,7 +462,7 @@ class Automaton(object):
         memo = self.init_memo()
         prev_mass = -1.0
         while (abs(generated_mass - prev_mass) >= 1e-4
-                   and 1.0 - generated_mass > 1e-4):
+                   and 1.0 - generated_mass > 0.01):
 
             prev_mass = generated_mass
             for word in memo.keys():
@@ -484,7 +482,6 @@ class Automaton(object):
             generated_mass = sum([math.exp(prob_list[self.state_indices["$"]])
                 for s, prob_list in memo.iteritems() if (s != () and
                 prob_list[self.state_indices["$"]] is not None )])
-
             # compute hq - only debug
             # hq = sum([-probs[self.state_indices["$"]] * math.exp(probs[self.state_indices["$"]]) for probs in memo.itervalues()])
 
