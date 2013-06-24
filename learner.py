@@ -113,10 +113,12 @@ class Learner(object):
         energy = compute_energy()
         for factor, temperature in zip(self.factors, self.temps):
             for turn_count in xrange(self.turns_for_each):
-                if turn_count == 0:
-                    logging.info("Running an iteration of Simulated " + 
-                                 "Annealing with {0} factor ".format(factor) +
-                                 "and at {0} energy level.".format(energy))
+                #if turn_count == 0:
+                    #logging.info("SA e={0}".format(energy) + 
+                                 #" f={0} t={1}".format(factor, temperature))
+                if turn_count * 10 % self.turns_for_each == 0:
+                    logging.info("SA tc ={0} e={1}".format(turn_count, energy) + 
+                                 " f={0} t={1}".format(factor, temperature))
 
                 change_options = self.choose_change_options(option_randomizer,
                                                             factor)
@@ -130,12 +132,12 @@ class Learner(object):
                     still_accepting_probability = random.random()
                     accept = (still_accepting_probability <
                               math.exp(-energy_change/temperature))
-                    #if accept:
-                        #print "Accepting:", energy_change
 
                 if accept:
                     energy = new_energy
                     self.previous_change_options["result"] = True
+                    logging.debug("Accepting {0} energy change".format(
+                        energy_change))
                 else:
                     self.previous_change_options["result"] = False
                     change_back()
