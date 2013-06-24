@@ -20,11 +20,11 @@ def generate_quantizers(levels, cutoffs):
             yield quantizer
 
 def generate_options(levels, cutoffs, distances, emissions, type_, state_bits):
-    for q in generate_quantizers(levels, cutoffs):
-        for d in distances:
-            for e in emissions:
-                for t in type_:
-                    for s in state_bits:
+    for s in state_bits:
+        for q in generate_quantizers(levels, cutoffs):
+            for d in distances:
+                for e in emissions:
+                    for t in type_:
                         yield q, d, e, t, s
 
 def create_corpora(corpus_fn):
@@ -43,10 +43,10 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
     if distfp is not None:
         if wfsa_.quantizer is not None:
             bits = int(round(math.log(wfsa_.quantizer.levels, 2)))
-            f = [2 ** i for i in xrange(bits-2, -1, -1)]
-            t = [1e-3 * i for i in xrange(bits-1, 0, -1)]
-            learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.2,
-                distfp=distfp, turns_for_each=200, factors=f,
+            f = [2 ** i for i in xrange(max(0, bits-5), -1, -1)]
+            t = [1e-5/2**i for i in xrange(0, max(1, bits-4))]
+            learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
+                distfp=distfp, turns_for_each=500, factors=f,
                 temperatures=t)
         else:
             # continuous case, not implemented
@@ -145,7 +145,6 @@ class Exp(object):
             learnt_wfsa, corpus, encoder)
 
         return [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
-
 
     def run_sze_exp(self, quantizer, distance, emissions, state_bits, entropy):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
