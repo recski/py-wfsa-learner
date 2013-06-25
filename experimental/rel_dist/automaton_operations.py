@@ -31,20 +31,24 @@ def exponential(automaton):
 def moore_to_pyopenfst_mealy(moore):
     print 'moore_to_pyopenfst_mealy' 
     moore_states = get_states(moore.m)[2]
-    print moore_states
+    # print moore_states
     moore_indeces = dict([(value, index) for index, value in enumerate(moore_states)])
     
-    mealy = fst.StdVectorFst()
+    mealy = fst.SimpleFst()
     for i in range(len(moore_states)):
         mealy.add_state()
     mealy.start = moore_indeces['^']
     mealy[moore_indeces['$']].final = 1.
     for state in moore_states:
         mealy.add_state()
-    for src in moore:
-        for tg_data in src:
-            tg, w = tg_data.iteritems()[0]
-            mealy.add_arc(moore_indeces[src], moore.emissions[tg], moore.emissions[tg], w, moore_indeces[tg])
+    for src in moore.m:
+        for tg in moore.m[src]:
+            w = moore.m[src][tg]
+            if tg in moore.emissions:
+                emission = "".join(moore.emissions[tg])
+            else:
+                emission = "EPSILON"
+            mealy.add_arc(moore_indeces[src], moore_indeces[tg], emission, emission, w)
     return mealy
 
 
@@ -52,15 +56,12 @@ def automata_to_fw_input_automata(moore_aut_1):
     
     mealy_aut_1 = moore_to_pyopenfst_mealy(moore_aut_1)
     mealy_aut_2 = moore_to_pyopenfst_mealy(moore_aut_2)
-    
-     
-
 
     return input_aut_1, input_aut_2
     
 def test_fst(moore_aut_1):
     mealy_aut_1 = moore_to_pyopenfst_mealy(moore_aut_1)
-    mealy_aut_1.Write('test')
+    mealy_aut_1.write('test')
     return ''
 
 def main():
