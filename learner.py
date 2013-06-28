@@ -162,7 +162,7 @@ def optparser():
     parser = OptionParser()
     parser.add_option("-f", "--factors", dest="factors", help="comma " + 
                       "separated list of change factors " + 
-                      "[default=%default]", default="0.2,0.4", 
+                      "[default=%default]", default="2,1", 
                       type="string", action="callback",
                       callback=csl2l_callback)
     parser.add_option("-t", "--temps", dest="temps", default="1e-5,1e-6",
