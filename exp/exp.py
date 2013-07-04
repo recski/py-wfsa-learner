@@ -158,7 +158,9 @@ class Exp(object):
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,
             "learnt_{0}.wfsa".format(exp_name))
 
-        corpus = self.unigram_corpus
+        corpus = (self.morpheme_corpus if emissions == "m" else
+                  self.unigram_corpus)
+
         # read Automaton or learn it and dump it finally
         if os.path.exists(learnt_wfsa_filename):
             # read already learnt automaton
