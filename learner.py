@@ -71,7 +71,8 @@ class Learner(object):
 
             self.automaton.boost_edge(edge, factor)
         else:
-            self.automaton.m = copy(self.previous_change_options["m"])
+            src, transitions = self.previous_change_options["transitions"]
+            self.automaton.m[src] = copy(transitions)
 
 
     def randomize_automaton_change(self, factor):
@@ -95,7 +96,7 @@ class Learner(object):
         factor = (factor if random.random() > 0.5 else -factor)
         
         change_options["factor"] = factor
-        change_options["m"] = copy(self.automaton.m)
+        change_options["transitions"] = (s1, self.automaton.m[s1])
         return change_options
 
     def choose_change_options(self, change_options_random, *args):
