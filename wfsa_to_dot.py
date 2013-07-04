@@ -1,7 +1,8 @@
 from collections import defaultdict
 import sys
 
-header = 'digraph finite_state_machine {\n\trankdir=LR;\n\tdpi=100;\n\tranksep="5.0 equally";'#\n\tordering=out;'
+#header = 'digraph finite_state_machine {\n\trankdir=LR;\n\tdpi=100;\n\tranksep="5.0 equally";'#\n\tordering=out;'
+header = 'digraph finite_state_machine {\n\tdpi=100;'#\n\tordering=out;'
 
 g_prefixes = set(['^', 'a_0', 'akAr_0', 'bAr_0', 'egy_0', 'mAs_0', 'se_0', 'vala_0'])
 g_suffixes = set(['$', 'vala_0', 'Ert_0', 'hogy_0', 'hol_0', 'honnEt_0', 'honnan_0', 'hovA_0', 'hova_0', 'ki_0', 'kor_0', 'meddig_0', 'mely_0', 'melyik_0', 'mennyi_0', 'miErt_0', 'mi_0', 'mikor_0', 'milyen_0'])
