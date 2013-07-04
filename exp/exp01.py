@@ -25,6 +25,7 @@ def main(wd):
     emissions = ["c"]
     type_ = ["l", "3", ["hogy"], "a"]
     type_ = ["l"]
+    type_ = ["3"]
     state_bits = ["u", "e"]
     state_bits = ["u"]
     options = list(generate_options(levels, cutoffs, distances, emissions, type_,

@@ -43,10 +43,13 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
     if distfp is not None:
         if wfsa_.quantizer is not None:
             bits = int(round(math.log(wfsa_.quantizer.levels, 2)))
-            f = [2 ** i for i in xrange(bits-2, -1, -1)]
-            t = [1e-3 * i for i in xrange(bits-1, 0, -1)]
+            #f = [2 ** i for i in xrange(bits-2, -1, -1)]
+            #t = [1e-4 * i for i in xrange(bits-1, 0, -1)]
+            f = [2 ** i for i in xrange(max(0, bits-5), -1, -1)]
+            t = [1e-5/2**i for i in xrange(0, max(1, bits-4))]
+            #t = [1e-50 for i in xrange(bits-1, 0, -1)]
             learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.2,
-                distfp=distfp, turns_for_each=200, factors=f,
+                distfp=distfp, turns_for_each=1000, factors=f,
                 temperatures=t)
         else:
             # continuous case, not implemented
@@ -148,12 +151,12 @@ class Exp(object):
 
 
     def run_sze_exp(self, quantizer, distance, emissions, state_bits, entropy):
-        exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
+        exp_name = "{0}-{1}-{2}-{3}-{4}".format(
             quantizer.levels,
             abs(quantizer.neg_cutoff),
             'm',
             emissions,
-            distance[0], state_bits)
+            distance[0])
 
         logging.info("Running {0}".format(exp_name))
         learnt_wfsa_filename = "{0}/{1}".format(self.workdir,

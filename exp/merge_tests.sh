@@ -9,6 +9,6 @@ for c1 in S U E P M I; do
         cat ../data/sze_$1.count | tr $c1 $c2 | python ../data/add_patt_freqs.py > ../data/merged/$fn
         mkdir $outdir/$fn 2> /dev/null 
         echo $fn
-        nice python exp_sze.py $outdir/$fn ../data/merged/$fn sze_$1 > $outdir/$fn/$fn.out 2> $outdir/$fn/$fn.log 
+        nice python exp_sze.py $outdir/$fn ../data/merged/$fn $1 > $outdir/$fn/$fn.out 2> $outdir/$fn/$fn.log 
     done
 done
