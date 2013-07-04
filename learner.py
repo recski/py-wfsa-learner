@@ -96,7 +96,7 @@ class Learner(object):
         factor = (factor if random.random() > 0.5 else -factor)
         
         change_options["factor"] = factor
-        change_options["transitions"] = (s1, self.automaton.m[s1])
+        change_options["transitions"] = (s1, copy(self.automaton.m[s1]))
         return change_options
 
     def choose_change_options(self, change_options_random, *args):
