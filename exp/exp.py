@@ -46,7 +46,7 @@ def learn_wfsa(wfsa, corpus, distfp=None, checkpoint=None):
             f = [2 ** i for i in xrange(max(0, bits-5), -1, -1)]
             t = [1e-5/2**i for i in xrange(0, max(1, bits-4))]
             learner = Learner(wfsa_, corpus, checkpoint, pref_prob=0.0,
-                distfp=distfp, turns_for_each=500, factors=f,
+                distfp=distfp, turns_for_each=300, factors=f,
                 temperatures=t)
         else:
             # continuous case, not implemented
@@ -146,7 +146,7 @@ class Exp(object):
 
         return [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
 
-    def run_sze_exp(self, quantizer, distance, emissions, state_bits, entropy):
+    def run_uniform_exp(self, quantizer, distance, emissions, state_bits, entropy):
         exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
             quantizer.levels,
             abs(quantizer.neg_cutoff),
@@ -192,13 +192,19 @@ class Exp(object):
 
     def run_sze_tok_exp(self, quantizer, distance, emissions, state_bits):
         entropy = 0.933201
-        return self.run_sze_exp(quantizer, distance, emissions, state_bits,
+        return self.run_uniform_exp(quantizer, distance, emissions, state_bits,
                                 entropy)
 
     def run_sze_type_exp(self, quantizer, distance, emissions, state_bits):
         entropy = 1.56655
-        return self.run_sze_exp(quantizer, distance, emissions, state_bits,
+        return self.run_uniform_exp(quantizer, distance, emissions, state_bits,
                                 entropy)
+
+    def run_mnsz_tok_exp(self, quantizer, distance, emissions, state_bits):
+        entropy = 2.914877
+        return self.run_uniform_exp(quantizer, distance, emissions, state_bits,
+                                entropy)
+        pass
 
 def run_exp(args):
     (exp, quantizer, distance, emission, type_, state_bits) = args
@@ -212,3 +218,8 @@ def run_exp(args):
         return exp.run_sze_tok_exp(quantizer, distance, emission, state_bits)
     elif type_ == "sze_types":
         return exp.run_sze_type_exp(quantizer, distance, emission, state_bits)
+    elif type_ == "mnsz_toks":
+        return exp.run_mnsz_tok_exp(quantizer, distance, emission, state_bits)
+    
+        
+
