@@ -146,14 +146,8 @@ class Exp(object):
 
         return [exp_name, bits_a, bits_e, bits_t, err, hq, tc]
 
-<<<<<<< HEAD
-
-    def run_sze_exp(self, quantizer, distance, emissions, state_bits, entropy):
-        exp_name = "{0}-{1}-{2}-{3}-{4}".format(
-=======
     def run_uniform_exp(self, quantizer, distance, emissions, state_bits, entropy):
-        exp_name = "{0}-{1}-{2}-{3}-{4}-{5}".format(
->>>>>>> e5c2e080a46ed9ec1a64da8eb451075309e5fc0c
+        exp_name = "{0}-{1}-{2}-{3}-{4}".format(
             quantizer.levels,
             abs(quantizer.neg_cutoff),
             'm',
