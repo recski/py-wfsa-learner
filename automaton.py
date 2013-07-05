@@ -455,6 +455,7 @@ class Automaton(object):
             self.m[hub_out][s2] = p
         self.m[state+'_0'] = {hub_out:0.0}    
         self.m[new_state+'_0'] = {hub_out:0.0}
+
     def language(self):
         generated_mass = 0.0
 
@@ -560,7 +561,7 @@ def create_wfsa(options):
         return
 
     if options.numstate:
-        input_ = open(options.init_from_corpus)
+        input_ = sys.stdin
         corpus = read_corpus(input_, options.separator)
         alphabet = get_alphabet(corpus)
         numbers_per_letters = dict([(letter, options.numstate)
