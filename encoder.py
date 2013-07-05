@@ -102,7 +102,7 @@ class Encoder(object):
                 gen_lang_entropy, total_cost)
 
 def main():
-    automaton = Automaton.create_from_dump(sys.argv[1])
+    automaton = Automaton.create_from_dump(open(sys.argv[1]))
     corpus = read_corpus(open(sys.argv[2]))
     normalize_corpus(corpus)
     entropy = float(sys.argv[3])

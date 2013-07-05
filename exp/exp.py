@@ -119,7 +119,7 @@ class Exp(object):
         # read Automaton or learn it and dump it finally
         if os.path.exists(learnt_wfsa_filename):
             # read already learnt automaton
-            learnt_wfsa = Automaton.create_from_dump(learnt_wfsa_filename)
+            learnt_wfsa = Automaton.create_from_dump(open(learnt_wfsa_filename))
             learnt_wfsa.quantizer = quantizer
             learnt_wfsa.round_and_normalize()
         else:
@@ -164,7 +164,7 @@ class Exp(object):
         # read Automaton or learn it and dump it finally
         if os.path.exists(learnt_wfsa_filename):
             # read already learnt automaton
-            learnt_wfsa = Automaton.create_from_dump(learnt_wfsa_filename)
+            learnt_wfsa = Automaton.create_from_dump(open(learnt_wfsa_filename))
             learnt_wfsa.quantizer = quantizer
             learnt_wfsa.round_and_normalize()
         else:

@@ -48,11 +48,11 @@ class Automaton(object):
         return tr
     
     @staticmethod
-    def create_from_dump(file_name):
-        """ Reads automaton dump from @file_name"""
+    def create_from_dump(f):
+        """ Reads automaton dump from @f"""
         automaton = Automaton()
         # create states and emissions
-        for line in open(file_name):
+        for line in f:
             l = line.strip().split()
             if len(l) == 4:
                 s1, _, s2, weight = l
@@ -256,9 +256,6 @@ class Automaton(object):
 
             if epsilonState in self.emissions:
                 continue
-
-            # we already have this value because epsilon states
-            # came first
 
             # if the automaton is not complete, avoid KeyError:
             if not state in self.m[epsilonState]:

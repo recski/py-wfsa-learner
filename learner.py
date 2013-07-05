@@ -208,7 +208,7 @@ def optparser():
 def main(options):
     if not options.automaton_file:
         raise Exception("Automaton \"option\" (-a) is mandatory")
-    automaton = Automaton.create_from_dump(options.automaton_file)
+    automaton = Automaton.create_from_dump(open(options.automaton_file))
 
     if options.quantizer:
         automaton.quantizer = AbstractQuantizer.read(open(options.quantizer))

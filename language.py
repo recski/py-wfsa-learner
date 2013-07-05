@@ -8,7 +8,7 @@ import math
 from automaton import Automaton
 
 def main():
-    wfsa = Automaton.create_from_dump(sys.argv[1])
+    wfsa = Automaton.create_from_dump(open(sys.argv[1]))
     if len(sys.argv) > 2:
         remaining = float(sys.argv[2])
         lang = wfsa.language(remaining)
