@@ -8,6 +8,7 @@ from copy import deepcopy as copy
 from automaton import Automaton
 from quantizer import AbstractQuantizer
 from corpus import read_corpus, normalize_corpus
+from aut_dist_cache import DistanceCache
 
 class Learner(object):
     def __init__(self, automaton, corpus, checkpoint, pref_prob, distfp, 
@@ -34,6 +35,7 @@ class Learner(object):
 
         self.automaton = automaton
         self.corpus = corpus
+        self.dist_cache = DistanceCache(automaton, corpus)
 
         self.distfp = getattr(Automaton, distfp)
 
@@ -147,8 +149,7 @@ class Learner(object):
                 self.checkpoint(factor, temperature)
 
     def main(self):
-        compute_energy = lambda: self.automaton.distance_from_corpus(
-                self.corpus, self.distfp)
+        compute_energy = lambda: self.dist_cache.distance(self.distfp)
         change_something = lambda x: self.change_automaton(x, False)
         change_back = lambda: self.change_automaton(None, True)
         option_randomizer = lambda x: self.randomize_automaton_change(x)
