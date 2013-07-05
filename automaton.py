@@ -251,26 +251,25 @@ class Automaton(object):
                 total = max(soFar, total)
 
         # check the case of epsilon emission
-        #if (not Automaton.nonemitting(state)):
-        if True:
-            for epsilonState in self.m.keys():
-                epsilonState_i = self.state_indices[epsilonState]
-                if not Automaton.nonemitting(epsilonState):
-                    continue
+        for epsilonState in self.m.keys():
+            epsilonState_i = self.state_indices[epsilonState]
 
-                # we already have this value because epsilon states
-                # came first
+            if epsilonState in self.emissions:
+                continue
 
-                # if the automaton is not complete, avoid KeyError:
-                if not state in self.m[epsilonState]:
-                    continue
+            # we already have this value because epsilon states
+            # came first
 
-                if not string in memo or memo[string][epsilonState_i] is None:
-                    continue
+            # if the automaton is not complete, avoid KeyError:
+            if not state in self.m[epsilonState]:
+                continue
 
-                soFar = memo[string][epsilonState_i]
-                soFar += self.m[epsilonState][state]
-                total = max(soFar, total)
+            if not string in memo or memo[string][epsilonState_i] is None:
+                continue
+
+            soFar = memo[string][epsilonState_i]
+            soFar += self.m[epsilonState][state]
+            total = max(soFar, total)
 
         if string not in memo:
             memo[string] = [None] * len(self.state_indices)
