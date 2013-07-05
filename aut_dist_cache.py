@@ -10,6 +10,7 @@ class DistanceCache(object):
     def __init__(self, automaton, corpus):
         self.aut = automaton
         self.corpus = corpus
+        self.build_paths()
 
     def build_paths(self):
         aut = self.aut
